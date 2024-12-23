@@ -36,8 +36,9 @@ func flags() {
 	compose.Cmd.Flags().BoolVarP(&compose.App, "app", "a", false, "add app Dockerfile and to compose file")
 	compose.Cmd.Flags().BoolVarP(&compose.Kafka, "kafka", "k", false, "add kafka, zookeeper and kowl to compose file")
 
-	generator.Cmd.Flags().StringVarP(&builder.Desination, "destination", "d", "./gen/", "place where generate files would placed")
-	generator.Cmd.Flags().StringVarP(&builder.Source, "source", "s", "./", "read from")
-	generator.Cmd.Flags().StringVarP(&builder.Package, "packege", "p", "generated", "package name")
+	builder.Cmd.Flags().StringVarP(&builder.Desination, "destination", "d", "./gen/generated.go", "place where generate files would placed")
+	builder.Cmd.Flags().StringVarP(&builder.Source, "source", "s", "./", "read from")
+	builder.Cmd.Flags().StringVarP(&builder.Package, "packege", "p", "generated", "package name")
+	builder.Cmd.Flags().StringVarP(&builder.StructName, "struct", "n", "", "package name")
 
 }

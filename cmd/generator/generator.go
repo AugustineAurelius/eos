@@ -15,6 +15,4 @@ var (
 		Short: "generator cmd",
 		Long:  `generator cmd`,
 	}
-
-	Desination, Source, Package string
 )
