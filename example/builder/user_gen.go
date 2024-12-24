@@ -10,26 +10,29 @@ type userbuilder struct {
 func NewUserBuilder() *userbuilder {
 	return &userbuilder{}
 }
-func (b *userbuilder) SetName(Name string) {
-	b.inner.Name = Name
+func (b *userbuilder) Name(name string) {
+	b.inner.name = name
 }
-func (b *userbuilder) SetSurname(Surname string) {
-	b.inner.Surname = Surname
+func (b *userbuilder) Surname(surname string) {
+	b.inner.surname = surname
 }
-func (b *userbuilder) SetID(ID uuid.UUID) {
-	b.inner.ID = ID
+func (b *userbuilder) SetId(id uuid.UUID) {
+	b.inner.id = id
 }
-func (b *userbuilder) SetAddesses(Addesses []string) {
-	b.inner.Addesses = Addesses
+func (b *userbuilder) SetAddesses(addesses []string) {
+	b.inner.addesses = addesses
 }
 func (b *userbuilder) AddOneToAddesses(one string) {
-	b.inner.Addesses = append(b.inner.Addesses, one)
+	b.inner.addesses = append(b.inner.addesses, one)
 }
-func (b *userbuilder) SetAddressesID(AddressesID []uuid.UUID) {
-	b.inner.AddressesID = AddressesID
+func (b *userbuilder) SetAddressesID(addressesID []uuid.UUID) {
+	b.inner.addressesID = addressesID
 }
 func (b *userbuilder) AddOneToAddressesID(one uuid.UUID) {
-	b.inner.AddressesID = append(b.inner.AddressesID, one)
+	b.inner.addressesID = append(b.inner.addressesID, one)
+}
+func (b *userbuilder) SetInner(inner InnerUser) {
+	b.inner.inner = inner
 }
 func (b *userbuilder) Build() User {
 	return *b.inner

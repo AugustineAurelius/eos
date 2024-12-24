@@ -35,56 +35,19 @@ func Generate(Source, StructName string) error {
 	for i := 0; i < structType.NumFields(); i++ {
 		field := structType.Field(i)
 
+		titleName := strings.Title(field.Name())
+		titleOfSetMethod := "Set" + titleName
+		titleOfAddOneMethod := "AddOneTo" + titleName
+
+		setBlock := Id("b").Dot("inner").Dot(field.Name()).Op("=").Id(field.Name())
+
 		switch v := field.Type().(type) {
 		case *types.Basic:
-
-			f.Func().Params(builderMethod).
-				Id("Set" + field.Name()).Params(Id(field.Name()).Id(v.String())).
-				Block(
-					Id("b").Dot("inner").Dot(field.Name()).Op("=").Id(field.Name()),
-				)
-
+			handleBasic(f, v, builderMethod, setBlock, titleName, field)
 		case *types.Named:
-			typeName := v.Obj()
-
-			f.Func().Params(builderMethod).
-				Id("Set" + field.Name()).Params(Id(field.Name()).Qual(typeName.Pkg().Path(), typeName.Name())).
-				Block(
-					Id("b").Dot("inner").Dot(field.Name()).Op("=").Id(field.Name()),
-				)
-
+			handleNamedParam(f, v, builderMethod, setBlock, titleOfSetMethod, field)
 		case *types.Slice:
-			switch s := v.Elem().(type) {
-			case *types.Basic:
-
-				f.Func().Params(builderMethod).
-					Id("Set" + field.Name()).Params(Id(field.Name()).Index().Id(s.String())).
-					Block(
-						Id("b").Dot("inner").Dot(field.Name()).Op("=").Id(field.Name()),
-					)
-
-				f.Func().Params(builderMethod).
-					Id("AddOneTo" + field.Name()).Params(Id("one").Id(s.String())).
-					Block(
-						Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one")),
-					)
-
-			case *types.Named:
-				typeName := s.Obj()
-
-				f.Func().Params(builderMethod).
-					Id("Set" + field.Name()).Params(Id(field.Name()).Index().Qual(typeName.Pkg().Path(), typeName.Name())).
-					Block(
-						Id("b").Dot("inner").Dot(field.Name()).Op("=").Id(field.Name()),
-					)
-
-				f.Func().Params(builderMethod).
-					Id("AddOneTo" + field.Name()).Params(Id("one").Qual(typeName.Pkg().Path(), typeName.Name())).
-					Block(
-						Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one")),
-					)
-
-			}
+			handleSlice(f, v, builderMethod, setBlock, titleOfSetMethod, titleOfAddOneMethod, field)
 
 		default:
 			return fmt.Errorf("struct field type not hanled: %T", v)
@@ -135,4 +98,55 @@ func parseStruct(Source, StructName string) *types.Struct {
 	}
 
 	return structType
+}
+
+func handleSlice(f *File, v *types.Slice, builderMethod, setBlock Code, titleOfSetMethod, titleOfAddOneMethod string, field *types.Var) {
+	switch s := v.Elem().(type) {
+	case *types.Basic:
+
+		f.Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Id(s.String())).
+			Block(setBlock)
+
+		f.Func().Params(builderMethod).
+			Id(titleOfAddOneMethod).Params(Id("one").Id(s.String())).
+			Block(
+				Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one")),
+			)
+
+	case *types.Named:
+		typeName := s.Obj()
+
+		f.Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Qual(typeName.Pkg().Path(), typeName.Name())).
+			Block(setBlock)
+
+		f.Func().Params(builderMethod).
+			Id(titleOfAddOneMethod).Params(Id("one").Qual(typeName.Pkg().Path(), typeName.Name())).
+			Block(
+				Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one")),
+			)
+	}
+
+}
+
+func handleNamedParam(f *File, v *types.Named, builderMethod, setBlock Code, titleOfSetMethod string, field *types.Var) {
+	typeName := v.Obj()
+
+	if strings.Contains(typeName.Pkg().Path(), "command-line-arguments") {
+		f.Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Id(typeName.Name())).
+			Block(setBlock)
+		return
+	}
+
+	f.Func().Params(builderMethod).
+		Id(titleOfSetMethod).Params(Id(field.Name()).Qual(typeName.Pkg().Path(), typeName.Name())).
+		Block(setBlock)
+}
+
+func handleBasic(f *File, v *types.Basic, builderMethod, setBlock Code, titleOfSetMethod string, field *types.Var) {
+	f.Func().Params(builderMethod).
+		Id(titleOfSetMethod).Params(Id(field.Name()).Id(v.String())).
+		Block(setBlock)
 }
