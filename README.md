@@ -2,7 +2,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/AugustineAurelius/eos">
-    <img src="logo.png" alt="Logo" width="240" height="240">
+    <img src="logo.jpg" alt="Logo" width="240" height="240">
   </a>
 
   <h3 align="center">EOS</h3>
