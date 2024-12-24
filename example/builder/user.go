@@ -1,8 +1,8 @@
-package example
+package example_builder
 
 import "github.com/google/uuid"
 
-//go:generate go run github.com/AugustineAurelius/eos generator builder --struct=User --source=user.go --destination=user_builder.go
+//go:generate eos generator builder --struct=User --source=user.go --destination=user_builder.go
 type User struct {
 	Name        string
 	Surname     string
