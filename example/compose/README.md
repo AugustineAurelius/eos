@@ -1,0 +1,2 @@
+cmd: eos compose -pka
+
