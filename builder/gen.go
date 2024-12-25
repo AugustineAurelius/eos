@@ -12,7 +12,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-func Generate(Source, StructName string) error {
+func Generate(Source, StructName, Destination string) error {
 	goPackage := os.Getenv("GOPACKAGE")
 
 	f := NewFile(goPackage)
@@ -23,7 +23,7 @@ func Generate(Source, StructName string) error {
 	builderStructName := strings.ToLower(StructName) + "builder"
 
 	f.Type().Id(builderStructName).Struct(
-		Id("inner").Op("*").Id(StructName),
+		Id("inner").Id(StructName),
 	)
 
 	f.Func().Id("New" + StructName + "Builder").Params().Op("*").Id(builderStructName).Block(
@@ -43,11 +43,11 @@ func Generate(Source, StructName string) error {
 
 		switch v := field.Type().(type) {
 		case *types.Basic:
-			handleBasic(f, v, builderMethod, setBlock, titleName, field)
+			handleBasic(f, v, builderMethod, setBlock, titleName, builderStructName, field)
 		case *types.Named:
-			handleNamedParam(f, v, builderMethod, setBlock, titleOfSetMethod, field)
+			handleNamedParam(f, v, builderMethod, setBlock, titleOfSetMethod, builderStructName, field)
 		case *types.Slice:
-			handleSlice(f, v, builderMethod, setBlock, titleOfSetMethod, titleOfAddOneMethod, field)
+			handleSlice(f, v, builderMethod, setBlock, titleOfSetMethod, titleOfAddOneMethod, builderStructName, field)
 
 		default:
 			return fmt.Errorf("struct field type not hanled: %T", v)
@@ -57,13 +57,16 @@ func Generate(Source, StructName string) error {
 	f.Func().Params(builderMethod).
 		Id("Build").Params().Id(StructName).
 		Block(
-			Return(Op("*").Id("b").Dot("inner")),
+			Return(Id("b").Dot("inner")),
 		)
 
 	goFile := os.Getenv("GOFILE")
 	ext := filepath.Ext(goFile)
 	baseFilename := goFile[0 : len(goFile)-len(ext)]
 	targetFilename := baseFilename + "_gen.go"
+	if Destination != "" {
+		targetFilename = Destination
+	}
 
 	return f.Save(targetFilename)
 }
@@ -99,54 +102,51 @@ func parseStruct(Source, StructName string) *types.Struct {
 
 	return structType
 }
+func handleBasic(f *File, v *types.Basic, builderMethod, setBlock Code, titleOfSetMethod, builderStructName string, field *types.Var) {
+	f.Func().Params(builderMethod).
+		Id(titleOfSetMethod).Params(Id(field.Name()).Id(v.String())).Op("*").Id(builderStructName).
+		Block(setBlock, Return(Id("b")))
+}
 
-func handleSlice(f *File, v *types.Slice, builderMethod, setBlock Code, titleOfSetMethod, titleOfAddOneMethod string, field *types.Var) {
+func handleNamedParam(f *File, v *types.Named, builderMethod, setBlock Code, titleOfSetMethod, builderStructName string, field *types.Var) {
+	typeName := v.Obj()
+
+	if strings.Contains(typeName.Pkg().Path(), "command-line-arguments") {
+		f.Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Id(typeName.Name())).Op("*").Id(builderStructName).
+			Block(setBlock, Return(Id("b")))
+		return
+	}
+
+	f.Func().Params(builderMethod).
+		Id(titleOfSetMethod).Params(Id(field.Name()).Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
+		Block(setBlock, Return(Id("b")))
+}
+
+func handleSlice(f *File, v *types.Slice, builderMethod, setBlock Code, titleOfSetMethod, titleOfAddOneMethod, builderStructName string, field *types.Var) {
+	appendOne := Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one"))
+
 	switch s := v.Elem().(type) {
 	case *types.Basic:
+		f.Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Id(s.String())).Op("*").Id(builderStructName).
+			Block(setBlock, Return(Id("b")))
 
 		f.Func().Params(builderMethod).
-			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Id(s.String())).
-			Block(setBlock)
-
-		f.Func().Params(builderMethod).
-			Id(titleOfAddOneMethod).Params(Id("one").Id(s.String())).
-			Block(
-				Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one")),
-			)
+			Id(titleOfAddOneMethod).Params(Id("one").Id(s.String())).Op("*").Id(builderStructName).
+			Block(appendOne, Return(Id("b")))
 
 	case *types.Named:
 		typeName := s.Obj()
 
 		f.Func().Params(builderMethod).
-			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Qual(typeName.Pkg().Path(), typeName.Name())).
-			Block(setBlock)
+			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
+			Block(setBlock, Return(Id("b")))
 
 		f.Func().Params(builderMethod).
-			Id(titleOfAddOneMethod).Params(Id("one").Qual(typeName.Pkg().Path(), typeName.Name())).
-			Block(
-				Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one")),
-			)
+			Id(titleOfAddOneMethod).Params(Id("one").Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
+			Block(appendOne, Return(Id("b")))
+
 	}
 
-}
-
-func handleNamedParam(f *File, v *types.Named, builderMethod, setBlock Code, titleOfSetMethod string, field *types.Var) {
-	typeName := v.Obj()
-
-	if strings.Contains(typeName.Pkg().Path(), "command-line-arguments") {
-		f.Func().Params(builderMethod).
-			Id(titleOfSetMethod).Params(Id(field.Name()).Id(typeName.Name())).
-			Block(setBlock)
-		return
-	}
-
-	f.Func().Params(builderMethod).
-		Id(titleOfSetMethod).Params(Id(field.Name()).Qual(typeName.Pkg().Path(), typeName.Name())).
-		Block(setBlock)
-}
-
-func handleBasic(f *File, v *types.Basic, builderMethod, setBlock Code, titleOfSetMethod string, field *types.Var) {
-	f.Func().Params(builderMethod).
-		Id(titleOfSetMethod).Params(Id(field.Name()).Id(v.String())).
-		Block(setBlock)
 }

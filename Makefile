@@ -4,3 +4,7 @@ install:
 
 generate:
 	@go generate ./...
+
+
+test: 
+	@go test ./... -v -count=1

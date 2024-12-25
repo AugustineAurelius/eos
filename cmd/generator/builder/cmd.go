@@ -23,6 +23,6 @@ var Cmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		errors.FailErr(builder.Generate(Source, StructName))
+		errors.FailErr(builder.Generate(Source, StructName, Desination))
 	},
 }
