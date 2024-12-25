@@ -40,14 +40,18 @@ func Generate(Source, StructName, Destination string) error {
 		titleOfAddOneMethod := "AddOneTo" + titleName
 
 		setBlock := Id("b").Dot("inner").Dot(field.Name()).Op("=").Id(field.Name())
+		fullBlock := Block(setBlock, Return(Id("b")))
 
 		switch v := field.Type().(type) {
 		case *types.Basic:
-			handleBasic(f, v, builderMethod, setBlock, titleName, builderStructName, field)
+			f.Add(AddMethod(builderMethod, handleBasic(v, titleName, builderStructName, field)).Add(fullBlock))
 		case *types.Named:
-			handleNamedParam(f, v, builderMethod, setBlock, titleOfSetMethod, builderStructName, field)
+			f.Add(AddMethod(builderMethod, handleNamedParam(v, titleOfSetMethod, builderStructName, field)).Add(fullBlock))
 		case *types.Slice:
-			handleSlice(f, v, builderMethod, setBlock, titleOfSetMethod, titleOfAddOneMethod, builderStructName, field)
+			f.Add(AddMethodMany(builderMethod, fullBlock,
+				handleSlice(v, titleOfSetMethod, titleOfAddOneMethod, builderStructName, field)))
+		case *types.Pointer:
+			f.Add(handlePointer(v, builderMethod, setBlock, titleName, titleOfSetMethod, titleOfAddOneMethod, builderStructName, field)...)
 
 		default:
 			return fmt.Errorf("struct field type not hanled: %T", v)
@@ -102,51 +106,122 @@ func parseStruct(Source, StructName string) *types.Struct {
 
 	return structType
 }
-func handleBasic(f *File, v *types.Basic, builderMethod, setBlock Code, titleOfSetMethod, builderStructName string, field *types.Var) {
-	f.Func().Params(builderMethod).
-		Id(titleOfSetMethod).Params(Id(field.Name()).Id(v.String())).Op("*").Id(builderStructName).
-		Block(setBlock, Return(Id("b")))
+
+func AddMethod(methodName Code, param Code) *Statement {
+	return Func().Params(methodName).Add(param)
 }
 
-func handleNamedParam(f *File, v *types.Named, builderMethod, setBlock Code, titleOfSetMethod, builderStructName string, field *types.Var) {
+func AddMethodMany(methodName, block Code, params []Code) *Statement {
+	var res Statement
+	for i, param := range params {
+		if i == 0 {
+			res.Add(Func().Params(methodName).Add(param).Add(block))
+			continue
+		}
+		res.Add(Line().Func().Params(methodName).Add(param))
+	}
+	return &res
+}
+
+func handleBasic(v *types.Basic, titleOfSetMethod, builderStructName string, field *types.Var) Code {
+	return Id(titleOfSetMethod).Params(Id(field.Name()).Id(v.String())).Op("*").Id(builderStructName)
+}
+
+func handleNamedParam(v *types.Named, titleOfSetMethod, builderStructName string, field *types.Var) Code {
 	typeName := v.Obj()
 
 	if strings.Contains(typeName.Pkg().Path(), "command-line-arguments") {
-		f.Func().Params(builderMethod).
-			Id(titleOfSetMethod).Params(Id(field.Name()).Id(typeName.Name())).Op("*").Id(builderStructName).
-			Block(setBlock, Return(Id("b")))
-		return
+		return Id(titleOfSetMethod).
+			Params(Id(field.Name()).Id(typeName.Name())).Op("*").Id(builderStructName)
 	}
 
-	f.Func().Params(builderMethod).
-		Id(titleOfSetMethod).Params(Id(field.Name()).Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
-		Block(setBlock, Return(Id("b")))
+	return Id(titleOfSetMethod).
+		Params(Id(field.Name()).Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName)
 }
 
-func handleSlice(f *File, v *types.Slice, builderMethod, setBlock Code, titleOfSetMethod, titleOfAddOneMethod, builderStructName string, field *types.Var) {
+func handleSlice(v *types.Slice, titleOfSetMethod, titleOfAddOneMethod, builderStructName string, field *types.Var) []Code {
 	appendOne := Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Id("b").Dot("inner").Dot(field.Name()), Id("one"))
 
 	switch s := v.Elem().(type) {
 	case *types.Basic:
-		f.Func().Params(builderMethod).
-			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Id(s.String())).Op("*").Id(builderStructName).
-			Block(setBlock, Return(Id("b")))
-
-		f.Func().Params(builderMethod).
-			Id(titleOfAddOneMethod).Params(Id("one").Id(s.String())).Op("*").Id(builderStructName).
-			Block(appendOne, Return(Id("b")))
+		return []Code{Id(titleOfSetMethod).Params(Id(field.Name()).Index().Id(s.String())).Op("*").Id(builderStructName),
+			Id(titleOfAddOneMethod).Params(Id("one").Id(s.String())).Op("*").Id(builderStructName).Block(appendOne, Return(Id("b")))}
 
 	case *types.Named:
 		typeName := s.Obj()
 
-		f.Func().Params(builderMethod).
-			Id(titleOfSetMethod).Params(Id(field.Name()).Index().Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
-			Block(setBlock, Return(Id("b")))
-
-		f.Func().Params(builderMethod).
+		return []Code{Id(titleOfSetMethod).Params(Id(field.Name()).Index().Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName),
 			Id(titleOfAddOneMethod).Params(Id("one").Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
-			Block(appendOne, Return(Id("b")))
+				Block(appendOne, Return(Id("b")))}
+	default:
+		errors.FailErr(fmt.Errorf("struct field type not hanled: %T", v))
 
 	}
+
+	return nil
+}
+
+func handlePointer(pointer *types.Pointer, builderMethod, setBlock Code, titleName, titleOfSetMethod, titleOfAddOneMethod, builderStructName string, field *types.Var) []Code {
+	switch v := pointer.Elem().(type) {
+	case *types.Basic:
+		return handleBasicPointer(v, builderMethod, setBlock, titleName, builderStructName, field)
+	case *types.Named:
+		return handleNamedParamPointer(v, builderMethod, setBlock, titleOfSetMethod, builderStructName, field)
+	case *types.Slice:
+		return handleSlicePointer(v, builderMethod, setBlock, titleOfSetMethod, titleOfAddOneMethod, builderStructName, field)
+
+	default:
+		errors.FailErr(fmt.Errorf("struct field type not hanled: %T", v))
+	}
+	return nil
+}
+
+func handleBasicPointer(v *types.Basic, builderMethod, setBlock Code, titleOfSetMethod, builderStructName string, field *types.Var) []Code {
+	return []Code{Func().Params(builderMethod).
+		Id(titleOfSetMethod).Params(Id(field.Name()).Op("*").Id(v.String())).Op("*").Id(builderStructName).
+		Block(setBlock, Return(Id("b")))}
+}
+
+func handleNamedParamPointer(v *types.Named, builderMethod, setBlock Code, titleOfSetMethod, builderStructName string, field *types.Var) []Code {
+	typeName := v.Obj()
+
+	if strings.Contains(typeName.Pkg().Path(), "command-line-arguments") {
+		return []Code{Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Op("*").Id(typeName.Name())).Op("*").Id(builderStructName).
+			Block(setBlock, Return(Id("b")))}
+	}
+
+	return []Code{Func().Params(builderMethod).
+		Id(titleOfSetMethod).Params(Id(field.Name()).Op("*").Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
+		Block(setBlock, Return(Id("b")))}
+}
+
+func handleSlicePointer(v *types.Slice, builderMethod, setBlock Code, titleOfSetMethod, titleOfAddOneMethod, builderStructName string, field *types.Var) []Code {
+	appendOne := Op("*").Id("b").Dot("inner").Dot(field.Name()).Op("=").Append(Op("*").Id("b").Dot("inner").Dot(field.Name()), Id("one"))
+
+	switch s := v.Elem().(type) {
+	case *types.Basic:
+		return []Code{Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Op("*").Index().Id(s.String())).Op("*").Id(builderStructName).
+			Block(setBlock, Return(Id("b"))),
+
+			Line().Func().Params(builderMethod).
+				Id(titleOfAddOneMethod).Params(Id("one").Id(s.String())).Op("*").Id(builderStructName).
+				Block(appendOne, Return(Id("b")))}
+
+	case *types.Named:
+		typeName := s.Obj()
+
+		return []Code{Func().Params(builderMethod).
+			Id(titleOfSetMethod).Params(Id(field.Name()).Op("*").Index().Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
+			Block(setBlock, Return(Id("b"))),
+
+			Line().Func().Params(builderMethod).
+				Id(titleOfAddOneMethod).Params(Id("one").Qual(typeName.Pkg().Path(), typeName.Name())).Op("*").Id(builderStructName).
+				Block(appendOne, Return(Id("b")))}
+
+	}
+
+	return nil
 
 }

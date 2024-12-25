@@ -42,6 +42,30 @@ func (b *userbuilder) SetInner(inner InnerUser) *userbuilder {
 	b.inner.inner = inner
 	return b
 }
+func (b *userbuilder) Pointer(pointer *string) *userbuilder {
+	b.inner.pointer = pointer
+	return b
+}
+func (b *userbuilder) SetPointerID(pointerID *uuid.UUID) *userbuilder {
+	b.inner.pointerID = pointerID
+	return b
+}
+func (b *userbuilder) SetPointerSliceID(pointerSliceID *[]uuid.UUID) *userbuilder {
+	b.inner.pointerSliceID = pointerSliceID
+	return b
+}
+func (b *userbuilder) AddOneToPointerSliceID(one uuid.UUID) *userbuilder {
+	*b.inner.pointerSliceID = append(*b.inner.pointerSliceID, one)
+	return b
+}
+func (b *userbuilder) SetPointerSlicePointer(pointerSlicePointer *[]string) *userbuilder {
+	b.inner.pointerSlicePointer = pointerSlicePointer
+	return b
+}
+func (b *userbuilder) AddOneToPointerSlicePointer(one string) *userbuilder {
+	*b.inner.pointerSlicePointer = append(*b.inner.pointerSlicePointer, one)
+	return b
+}
 func (b *userbuilder) Build() User {
 	return b.inner
 }
