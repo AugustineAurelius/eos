@@ -1,0 +1,35 @@
+package {{.PackageName}}
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Masterminds/squirrel"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/google/uuid"
+)
+
+// Get{{.MessageName}} retrieves a {{.MessageName}} by ID.
+func Get{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, id uuid.UUID) (*{{.MessageName}}, error) {
+	query, args, err := squirrel.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+		{{- if .JoinFields }}
+		{{- range .JoinFields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+		{{- end }}
+	).
+	From(Table{{.MessageName}}).
+	{{- if .JoinTable }}
+	Join(JoinTable{{.MessageName}} + " ON " + JoinCondition{{.MessageName}}).
+	{{- end }}
+	Where(squirrel.Eq{Column{{.MessageName}}Id: id}).ToSql()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build query: %w", err)
+	}
+	var {{.MessageName | lower}} {{.MessageName}}
+	err = db.QueryRow(ctx, query, args...).Scan({{.Fields | scanFields}}, {{.JoinFields | scanFields}})
+	return &{{.MessageName | lower}}, err
+}

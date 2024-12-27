@@ -1,0 +1,32 @@
+package {{.PackageName}}
+
+import "github.com/google/uuid"
+
+// {{.MessageName}} represents the {{.MessageName}} message.
+type {{.MessageName}} struct {
+{{- range .Fields }}
+	{{.Name}} {{.Type}}
+{{- end }}
+{{- if .JoinFields }}
+	{{- range .JoinFields }}
+	{{.Name}} {{.Type}}
+	{{- end }}
+{{- end }}
+}
+
+// Table and column name constants for {{.MessageName}}
+const (
+	Table{{.MessageName}} = "{{.TableName}}"
+{{- range .Fields }}
+	Column{{.MessageName}}{{.Name}} = "{{.Column}}"
+{{- end }}
+{{- if .JoinTable }}
+	JoinTable{{.MessageName}} = "{{.JoinTable}}"
+	JoinCondition{{.MessageName}} = "{{.JoinCondition}}"
+{{- end }}
+{{- if .JoinFields }}
+	{{- range .JoinFields }}
+	Column{{.MessageName}}{{.Name}} = "{{.Column}}"
+	{{- end }}
+{{- end }}
+)

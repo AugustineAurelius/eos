@@ -6,6 +6,7 @@ import (
 	"github.com/AugustineAurelius/eos/cmd/compose"
 	"github.com/AugustineAurelius/eos/cmd/generator"
 	"github.com/AugustineAurelius/eos/cmd/generator/builder"
+	"github.com/AugustineAurelius/eos/cmd/generator/repository"
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +30,7 @@ func init() {
 	rootCmd.AddCommand(compose.Cmd)
 
 	rootCmd.AddCommand(generator.Cmd)
+
 }
 
 func flags() {
@@ -40,5 +42,7 @@ func flags() {
 	builder.Cmd.Flags().StringVarP(&builder.Source, "source", "s", "./", "read from")
 	builder.Cmd.Flags().StringVarP(&builder.Package, "packege", "p", "generated", "package name")
 	builder.Cmd.Flags().StringVarP(&builder.StructName, "struct", "n", "", "package name")
+
+	repository.Cmd.Flags().StringVarP(&repository.StructName, "type", "t", "", "package name")
 
 }
