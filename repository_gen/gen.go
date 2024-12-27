@@ -9,6 +9,8 @@ import (
 	"os"
 	"strings"
 	"text/template"
+
+	"github.com/AugustineAurelius/eos/pkg/errors"
 )
 
 //go:embed *
@@ -30,19 +32,97 @@ type MessageData struct {
 }
 
 func Generate(structName string) {
+	filePath := os.Getenv("GOFILE")
 
-	filePath := os.Getenv("GOFILE") // Get the file path from the go:generate directive
-
-	// Parse the Go file to extract the struct
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
 	if err != nil {
-		fmt.Printf("Failed to parse Go file: %v\n", err)
-		return
+		errors.FailErr(fmt.Errorf("Failed to parse Go file: %w\n", err))
 	}
 
-	// Find the struct definition
-	var fields []Field
+	fields, err := parseStruct(node, structName)
+	if err != nil {
+		errors.FailErr(err)
+	}
+
+	packageName := node.Name.Name
+	tableName := strings.ToLower(structName) + "s"
+
+	data := MessageData{
+		PackageName:  packageName,
+		MessageName:  structName,
+		TableName:    tableName,
+		Fields:       fields,
+		Columns:      strings.Join(getColumns(fields), ", "),
+		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
+	}
+
+	generateFile("schema.go", "schema_template.tmpl", data)
+
+	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "get_template.tmpl", data)
+	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "create_template.tmpl", data)
+	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "update_template.tmpl", data)
+	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "delete_template.tmpl", data)
+}
+
+func generateFile(fileName, tmplPath string, data MessageData) {
+	tmplContent, err := templateFS.ReadFile(tmplPath)
+	if err != nil {
+		errors.FailErr(fmt.Errorf("Failed to read template %s: %v\n", tmplPath, err))
+	}
+
+	// Parse the template
+	tmpl, err := template.New(fileName).Funcs(template.FuncMap{
+		"lower": strings.ToLower,
+		"columns": func(fields []Field) string {
+			cols := make([]string, 0, len(fields))
+			for _, field := range fields {
+				cols = append(cols, fmt.Sprintf("Column%s%s", data.MessageName, field.Name))
+			}
+			return strings.Join(cols, ", ")
+		},
+		"scanFields": func(fields []Field) string {
+			scanFields := make([]string, 0, len(fields))
+			for _, field := range fields {
+				scanFields = append(scanFields, fmt.Sprintf("&{{$.MessageName | lower}}.%s", field.Name))
+			}
+			return strings.Join(scanFields, ", ")
+		},
+	}).Parse(string(tmplContent)) // Convert content to string
+	if err != nil {
+		errors.FailErr(fmt.Errorf("Failed to parse template %s: %v\n", tmplPath, err))
+	}
+
+	file, err := os.Create(fileName)
+	if err != nil {
+		errors.FailErr(fmt.Errorf("Failed to create file %s: %v\n", fileName, err))
+	}
+	defer file.Close()
+
+	if err := tmpl.Execute(file, data); err != nil {
+		errors.FailErr(fmt.Errorf("Failed to execute template %s: %v", tmplPath, err))
+	}
+
+	fmt.Printf("Generated %s\n", fileName)
+}
+
+func exprToString(expr ast.Expr) string {
+	switch v := expr.(type) {
+	case *ast.Ident:
+		return v.Name
+	case *ast.SelectorExpr:
+		return exprToString(v.X) + "." + v.Sel.Name
+	case *ast.ArrayType:
+		return "[]" + exprToString(v.Elt)
+	case *ast.StarExpr:
+		return "*" + exprToString(v.X)
+	default:
+		return "unknown"
+	}
+}
+
+func parseStruct(node *ast.File, structName string) ([]Field, error) {
+	fields := make([]Field, 0, 8)
 	for _, decl := range node.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok || genDecl.Tok != token.TYPE {
@@ -72,97 +152,15 @@ func Generate(structName string) {
 	}
 
 	if len(fields) == 0 {
-		fmt.Printf("Struct %s not found in file %s\n", structName, filePath)
-		return
+		return nil, fmt.Errorf("Struct %s not found", structName)
 	}
 
-	// Generate CRUD methods and constants
-	packageName := node.Name.Name
-	tableName := strings.ToLower(structName) + "s"
+	return fields, nil
 
-	data := MessageData{
-		PackageName:  packageName,
-		MessageName:  structName,
-		TableName:    tableName,
-		Fields:       fields,
-		Columns:      strings.Join(getColumns(fields), ", "),
-		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
-	}
-
-	// Generate schema file
-	generateFile("schema.go", "templates/schema_template.tmpl", data)
-	// Generate CRUD files
-	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "repository_gen/get_template.tmpl", data)
-	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "repository_gen/create_template.tmpl", data)
-	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "repository_gen/update_template.tmpl", data)
-	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "repository_gen/delete_template.tmpl", data)
-}
-
-func generateFile(fileName, tmplPath string, data MessageData) {
-	// Read the embedded template
-	tmplContent, err := templateFS.ReadFile(tmplPath)
-	if err != nil {
-		fmt.Printf("Failed to read template %s: %v\n", tmplPath, err)
-		return
-	}
-
-	// Parse the template
-	tmpl, err := template.New(fileName).Funcs(template.FuncMap{
-		"lower": strings.ToLower,
-		"columns": func(fields []Field) string {
-			var cols []string
-			for _, field := range fields {
-				cols = append(cols, fmt.Sprintf("Column%s%s", data.MessageName, field.Name))
-			}
-			return strings.Join(cols, ", ")
-		},
-		"scanFields": func(fields []Field) string {
-			var scanFields []string
-			for _, field := range fields {
-				scanFields = append(scanFields, fmt.Sprintf("&{{$.MessageName | lower}}.%s", field.Name))
-			}
-			return strings.Join(scanFields, ", ")
-		},
-	}).Parse(string(tmplContent)) // Convert content to string
-	if err != nil {
-		fmt.Printf("Failed to parse template %s: %v\n", tmplPath, err)
-		return
-	}
-
-	// Create the output file
-	file, err := os.Create(fileName)
-	if err != nil {
-		fmt.Printf("Failed to create file %s: %v\n", fileName, err)
-		return
-	}
-	defer file.Close()
-
-	// Execute the template
-	if err := tmpl.Execute(file, data); err != nil {
-		fmt.Printf("Failed to execute template %s: %v\n", tmplPath, err)
-		return
-	}
-
-	fmt.Printf("Generated %s\n", fileName)
-}
-
-func exprToString(expr ast.Expr) string {
-	switch v := expr.(type) {
-	case *ast.Ident:
-		return v.Name
-	case *ast.SelectorExpr:
-		return exprToString(v.X) + "." + v.Sel.Name
-	case *ast.ArrayType:
-		return "[]" + exprToString(v.Elt)
-	case *ast.StarExpr:
-		return "*" + exprToString(v.X)
-	default:
-		return "unknown"
-	}
 }
 
 func getColumns(fields []Field) []string {
-	var cols []string
+	cols := make([]string, 0, len(fields))
 	for _, field := range fields {
 		cols = append(cols, fmt.Sprintf("Column%s%s", field.Name, field.Name))
 	}
@@ -170,7 +168,7 @@ func getColumns(fields []Field) []string {
 }
 
 func getPlaceholders(structName string, fields []Field) []string {
-	var placeholders []string
+	placeholders := make([]string, 0, len(fields))
 	for _, field := range fields {
 		placeholders = append(placeholders, fmt.Sprintf("%s.%s", strings.ToLower(structName), field.Name))
 	}

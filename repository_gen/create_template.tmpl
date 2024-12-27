@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/squirrel"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Create{{.MessageName}} inserts a new {{.MessageName}} into the database.
 func Create{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, {{.MessageName | lower}} *{{.MessageName}}) error {
-	query, args, err := squirrel.Insert(Table{{.MessageName}}).
+	query, args, err := sq.Insert(Table{{.MessageName}}).
 		Columns({{.Fields | columns}}).
 		Values({{.Placeholders}}).ToSql()
 	if err != nil {

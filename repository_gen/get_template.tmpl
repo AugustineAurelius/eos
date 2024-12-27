@@ -4,20 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/squirrel"
+    sq	"github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/google/uuid"
 )
 
 // Get{{.MessageName}} retrieves a {{.MessageName}} by ID.
 func Get{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, id uuid.UUID) (*{{.MessageName}}, error) {
-	query, args, err := squirrel.Select(
+	query, args, err := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).
 	From(Table{{.MessageName}}).
-	Where(squirrel.Eq{Column{{.MessageName}}Id: id}).ToSql()
+	Where(sq.Eq{Column{{.MessageName}}Id: id}).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build query: %w", err)
 	}

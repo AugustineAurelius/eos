@@ -3,7 +3,7 @@ package {{.PackageName}}
 import "github.com/google/uuid"
 
 // {{.MessageName}} represents the {{.MessageName}} message.
-type {{.MessageName}} struct {
+type {{.MessageName}}Model struct {
 {{- range .Fields }}
 	{{.Name}} {{.Type}}
 {{- end }}
@@ -13,6 +13,6 @@ type {{.MessageName}} struct {
 const (
 	Table{{.MessageName}} = "{{.TableName}}"
 {{- range .Fields }}
-	Column{{.MessageName}}{{.Name}} = "{{.Column}}"
+	Column{{$.MessageName}}{{.Name}} = "{{.Column}}"
 {{- end }}
 )

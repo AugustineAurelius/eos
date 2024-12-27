@@ -4,19 +4,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Masterminds/squirrel"
+	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
 func Update{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, {{.MessageName | lower}} *{{.MessageName}}) error {
-	query, args, err := squirrel.Update(Table{{.MessageName}}).
+	query, args, err := sq.Update(Table{{.MessageName}}).
 		SetMap(map[string]interface{}{
 			{{- range .Fields }}
 			Column{{$.MessageName}}{{.Name}}: {{$.MessageName | lower}}.{{.Name}},
 			{{- end }}
 		}).
-		Where(squirrel.Eq{Column{{.MessageName}}Id: {{.MessageName | lower}}.Id}).ToSql()
+		Where(sq.Eq{Column{{.MessageName}}Id: {{.MessageName | lower}}.Id}).ToSql()
 	if err != nil {
 		return fmt.Errorf("failed to build query: %w", err)
 	}
