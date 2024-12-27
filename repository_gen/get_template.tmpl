@@ -15,21 +15,13 @@ func Get{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, id uuid.UUID) (*
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
-		{{- if .JoinFields }}
-		{{- range .JoinFields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-		{{- end }}
 	).
 	From(Table{{.MessageName}}).
-	{{- if .JoinTable }}
-	Join(JoinTable{{.MessageName}} + " ON " + JoinCondition{{.MessageName}}).
-	{{- end }}
 	Where(squirrel.Eq{Column{{.MessageName}}Id: id}).ToSql()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build query: %w", err)
 	}
 	var {{.MessageName | lower}} {{.MessageName}}
-	err = db.QueryRow(ctx, query, args...).Scan({{.Fields | scanFields}}, {{.JoinFields | scanFields}})
+	err = db.QueryRow(ctx, query, args...).Scan({{.Fields | scanFields}})
 	return &{{.MessageName | lower}}, err
 }

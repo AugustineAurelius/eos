@@ -1,38 +1,33 @@
-package repositorygen
+package main
 
 import (
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
+	"net/http"
 	"os"
-	"reflect"
 	"strings"
 	"text/template"
 )
 
 type Field struct {
-	Name       string
-	Type       string
-	Column     string
-	ForeignKey string
+	Name   string
+	Type   string
+	Column string
 }
 
 type MessageData struct {
-	PackageName   string
-	MessageName   string
-	TableName     string
-	Fields        []Field
-	JoinFields    []Field
-	Columns       string
-	Placeholders  string
-	JoinTable     string
-	JoinCondition string
-	JoinColumns   string
+	PackageName  string
+	MessageName  string
+	TableName    string
+	Fields       []Field
+	Columns      string
+	Placeholders string
 }
 
 func Generate(structName string) {
-
 	filePath := os.Getenv("GOFILE") // Get the file path from the go:generate directive
 
 	// Parse the Go file to extract the struct
@@ -63,16 +58,10 @@ func Generate(structName string) {
 				fieldName := field.Names[0].Name
 				fieldType := exprToString(field.Type)
 				column := strings.ToLower(fieldName)
-				fk := ""
-				if field.Tag != nil {
-					tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
-					fk = tag.Get("fk") // Extract foreign key from the `fk` tag
-				}
 				fields = append(fields, Field{
-					Name:       fieldName,
-					Type:       fieldType,
-					Column:     column,
-					ForeignKey: fk,
+					Name:   fieldName,
+					Type:   fieldType,
+					Column: column,
 				})
 			}
 			break
@@ -88,64 +77,16 @@ func Generate(structName string) {
 	packageName := node.Name.Name
 	tableName := strings.ToLower(structName) + "s"
 
-	var joinFields []Field
-	var joinTable, joinCondition, joinColumns string
-
-	for _, field := range fields {
-		if field.ForeignKey != "" {
-			// Handle foreign key
-			refTable, refColumn := parseForeignKey(field.ForeignKey)
-			joinTable = strings.ToLower(refTable) + "s"
-			joinCondition = fmt.Sprintf("%s.%s = %s.%s", tableName, field.Column, joinTable, strings.ToLower(refColumn))
-
-			// Add fields from the referenced table
-			for _, m := range node.Decls {
-				genDecl, ok := m.(*ast.GenDecl)
-				if !ok || genDecl.Tok != token.TYPE {
-					continue
-				}
-				for _, spec := range genDecl.Specs {
-					typeSpec, ok := spec.(*ast.TypeSpec)
-					if !ok || typeSpec.Name.Name != refTable {
-						continue
-					}
-					structType, ok := typeSpec.Type.(*ast.StructType)
-					if !ok {
-						continue
-					}
-					for _, f := range structType.Fields.List {
-						if f.Names[0].Name != refColumn { // Exclude the foreign key column itself
-							joinFields = append(joinFields, Field{
-								Name:   refTable + f.Names[0].Name,
-								Type:   exprToString(f.Type),
-								Column: joinTable + "." + strings.ToLower(f.Names[0].Name),
-							})
-							joinColumns += joinTable + "." + strings.ToLower(f.Names[0].Name) + ", "
-						}
-					}
-					break
-				}
-			}
-		}
-	}
-
-	if joinColumns != "" {
-		joinColumns = strings.TrimSuffix(joinColumns, ", ")
-	}
-
 	data := MessageData{
-		PackageName:   packageName,
-		MessageName:   structName,
-		TableName:     tableName,
-		Fields:        fields,
-		JoinFields:    joinFields,
-		Columns:       strings.Join(getColumns(fields), ", "),
-		Placeholders:  strings.Join(getPlaceholders(structName, fields), ", "),
-		JoinTable:     joinTable,
-		JoinCondition: joinCondition,
-		JoinColumns:   joinColumns,
+		PackageName:  packageName,
+		MessageName:  structName,
+		TableName:    tableName,
+		Fields:       fields,
+		Columns:      strings.Join(getColumns(fields), ", "),
+		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
 	}
 
+	// Generate schema file
 	generateFile("schema.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/schema_template.tmpl", data)
 	// Generate CRUD files
 	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/get_template.tmpl", data)
@@ -154,8 +95,37 @@ func Generate(structName string) {
 	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/delete_template.tmpl", data)
 }
 
-func generateFile(fileName, tmplFile string, data MessageData) {
-	tmpl, err := template.New(tmplFile).Funcs(template.FuncMap{
+func generateFile(fileName, tmplURL string, data MessageData) {
+	// Create a new HTTP request
+	req, err := http.NewRequest("GET", tmplURL, nil)
+	if err != nil {
+		fmt.Printf("Failed to create request for %s: %v\n", tmplURL, err)
+		return
+	}
+
+	// Send the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Failed to fetch template %s: %v\n", tmplURL, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Failed to fetch template %s: status code %d\n", tmplURL, resp.StatusCode)
+		return
+	}
+
+	// Read the response body into a string
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Printf("Failed to read response body for %s: %v\n", tmplURL, err)
+		return
+	}
+
+	// Parse the template
+	tmpl, err := template.New(fileName).Funcs(template.FuncMap{
 		"lower": strings.ToLower,
 		"columns": func(fields []Field) string {
 			var cols []string
@@ -171,12 +141,13 @@ func generateFile(fileName, tmplFile string, data MessageData) {
 			}
 			return strings.Join(scanFields, ", ")
 		},
-	}).ParseFiles(tmplFile)
+	}).Parse(string(body)) // Convert body to string
 	if err != nil {
-		fmt.Printf("Failed to parse template %s: %v\n", tmplFile, err)
+		fmt.Printf("Failed to parse template %s: %v\n", tmplURL, err)
 		return
 	}
 
+	// Create the output file
 	file, err := os.Create(fileName)
 	if err != nil {
 		fmt.Printf("Failed to create file %s: %v\n", fileName, err)
@@ -184,8 +155,9 @@ func generateFile(fileName, tmplFile string, data MessageData) {
 	}
 	defer file.Close()
 
-	if err := tmpl.ExecuteTemplate(file, tmplFile, data); err != nil {
-		fmt.Printf("Failed to execute template %s: %v\n", tmplFile, err)
+	// Execute the template
+	if err := tmpl.Execute(file, data); err != nil {
+		fmt.Printf("Failed to execute template %s: %v\n", tmplURL, err)
 		return
 	}
 
@@ -221,12 +193,4 @@ func getPlaceholders(structName string, fields []Field) []string {
 		placeholders = append(placeholders, fmt.Sprintf("%s.%s", strings.ToLower(structName), field.Name))
 	}
 	return placeholders
-}
-
-func parseForeignKey(foreignKey string) (string, string) {
-	parts := strings.Split(foreignKey, ".")
-	if len(parts) != 2 {
-		panic("invalid foreign key format")
-	}
-	return parts[0], parts[1]
 }
