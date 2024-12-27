@@ -1,16 +1,18 @@
-package main
+package repositorygen
 
 import (
+	"embed"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io"
-	"net/http"
 	"os"
 	"strings"
 	"text/template"
 )
+
+//go:embed repository_gen/*
+var templateFS embed.FS
 
 type Field struct {
 	Name   string
@@ -28,6 +30,7 @@ type MessageData struct {
 }
 
 func Generate(structName string) {
+
 	filePath := os.Getenv("GOFILE") // Get the file path from the go:generate directive
 
 	// Parse the Go file to extract the struct
@@ -87,40 +90,19 @@ func Generate(structName string) {
 	}
 
 	// Generate schema file
-	generateFile("schema.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/schema_template.tmpl", data)
+	generateFile("schema.go", "templates/schema_template.tmpl", data)
 	// Generate CRUD files
-	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/get_template.tmpl", data)
-	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/create_template.tmpl", data)
-	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/update_template.tmpl", data)
-	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "https://raw.githubusercontent.com/AugustineAurelius/eos/repository_gen/delete_template.tmpl", data)
+	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "repository_gen/get_template.tmpl", data)
+	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "repository_gen/create_template.tmpl", data)
+	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "repository_gen/update_template.tmpl", data)
+	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "repository_gen/delete_template.tmpl", data)
 }
 
-func generateFile(fileName, tmplURL string, data MessageData) {
-	// Create a new HTTP request
-	req, err := http.NewRequest("GET", tmplURL, nil)
+func generateFile(fileName, tmplPath string, data MessageData) {
+	// Read the embedded template
+	tmplContent, err := templateFS.ReadFile(tmplPath)
 	if err != nil {
-		fmt.Printf("Failed to create request for %s: %v\n", tmplURL, err)
-		return
-	}
-
-	// Send the request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Failed to fetch template %s: %v\n", tmplURL, err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Failed to fetch template %s: status code %d\n", tmplURL, resp.StatusCode)
-		return
-	}
-
-	// Read the response body into a string
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("Failed to read response body for %s: %v\n", tmplURL, err)
+		fmt.Printf("Failed to read template %s: %v\n", tmplPath, err)
 		return
 	}
 
@@ -141,9 +123,9 @@ func generateFile(fileName, tmplURL string, data MessageData) {
 			}
 			return strings.Join(scanFields, ", ")
 		},
-	}).Parse(string(body)) // Convert body to string
+	}).Parse(string(tmplContent)) // Convert content to string
 	if err != nil {
-		fmt.Printf("Failed to parse template %s: %v\n", tmplURL, err)
+		fmt.Printf("Failed to parse template %s: %v\n", tmplPath, err)
 		return
 	}
 
@@ -157,7 +139,7 @@ func generateFile(fileName, tmplURL string, data MessageData) {
 
 	// Execute the template
 	if err := tmpl.Execute(file, data); err != nil {
-		fmt.Printf("Failed to execute template %s: %v\n", tmplURL, err)
+		fmt.Printf("Failed to execute template %s: %v\n", tmplPath, err)
 		return
 	}
 
