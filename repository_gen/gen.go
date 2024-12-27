@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-//go:embed repository_gen/*
+//go:embed *
 var templateFS embed.FS
 
 type Field struct {
