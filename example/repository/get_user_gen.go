@@ -22,6 +22,10 @@ func GetUser(ctx context.Context, db *pgxpool.Pool, id uuid.UUID) (*User, error)
 		return nil, fmt.Errorf("failed to build query: %w", err)
 	}
 	var user User
-	err = db.QueryRow(ctx, query, args...).Scan(&{{$.MessageName | lower}}.Id, &{{$.MessageName | lower}}.Name, &{{$.MessageName | lower}}.Email)
+	err = db.QueryRow(ctx, query, args...).Scan(
+		&user.Id,
+		&user.Name,
+		&user.Email,
+	)
 	return &user, err
 }

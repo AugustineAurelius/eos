@@ -22,6 +22,10 @@ func Get{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, id uuid.UUID) (*
 		return nil, fmt.Errorf("failed to build query: %w", err)
 	}
 	var {{.MessageName | lower}} {{.MessageName}}
-	err = db.QueryRow(ctx, query, args...).Scan({{.Fields | scanFields}})
+	err = db.QueryRow(ctx, query, args...).Scan(
+		{{- range .Fields }}
+		&{{$.MessageName | lower}}.{{.Name}},
+		{{- end }}
+	)
 	return &{{.MessageName | lower}}, err
 }
