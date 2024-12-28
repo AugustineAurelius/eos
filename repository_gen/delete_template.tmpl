@@ -15,7 +15,7 @@ func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) e
 		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Dollar).MustSql()
 
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {
-		return fmt.Errorf("failed to exec delete query %s with args %v", query, args)
+		return fmt.Errorf("failed to exec delete query %s with args %v error = %w", query, args, err)
 	}
 	return nil
 }

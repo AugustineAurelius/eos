@@ -2,18 +2,25 @@
 package repository
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
- 	"github.com/google/uuid"
- 	sq "github.com/Masterminds/squirrel"
+	"context"
 
+	sq "github.com/Masterminds/squirrel"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
-
-
-type repository struct{
-	db *pgxpool.Pool
+type dbconn interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, optionsAndArgs ...interface{}) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, optionsAndArgs ...interface{}) pgx.Row
 }
 
-func New(db *pgxpool.Pool) *repository {
+type repository struct{
+	db dbconn
+}
+
+func New(db dbconn) *repository {
 	return &repository{
 		db: db,
 	}

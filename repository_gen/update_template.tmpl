@@ -19,7 +19,7 @@ func (r *repository) UpdateMany{{.MessageName}}(ctx context.Context,  f {{.Messa
 	
 	query, args := b.MustSql()
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {
-		return fmt.Errorf("failed to exec update query %s with args %v", query, args)
+		return fmt.Errorf("failed to exec update query %s with args %v error = %w", query, args, err)
 	}
 	return nil 
 }

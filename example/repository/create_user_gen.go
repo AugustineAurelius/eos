@@ -15,7 +15,7 @@ func (r *repository) CreateUser(ctx context.Context, user *User) error {
 		Values(user.ID, user.Name, user.Email).PlaceholderFormat(sq.Dollar).MustSql()
 
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {
-		return fmt.Errorf("failed to exec create query %s with args %v", query, args)
+		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
 	}
 	return nil
 }

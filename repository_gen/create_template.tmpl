@@ -15,7 +15,7 @@ func (r *repository) Create{{.MessageName}}(ctx context.Context, {{.MessageName 
 		Values({{.Placeholders}}).PlaceholderFormat(sq.Dollar).MustSql()
 
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {
-		return fmt.Errorf("failed to exec create query %s with args %v", query, args)
+		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
 	}
 	return nil
 }
