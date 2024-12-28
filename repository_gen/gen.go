@@ -63,6 +63,8 @@ func Generate(structName string) {
 	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "create_template.tmpl", data)
 	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "update_template.tmpl", data)
 	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "delete_template.tmpl", data)
+	generateFile("repository.go", "repository_template.tmpl", data)
+
 }
 
 func generateFile(fileName, tmplPath string, data MessageData) {

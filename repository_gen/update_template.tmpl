@@ -6,21 +6,32 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/google/uuid"
 )
 
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func Update{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, {{.MessageName | lower}} *{{.MessageName}}) error {
-	query, args, err := sq.Update(Table{{.MessageName}}).
-		SetMap(map[string]interface{}{
-			{{- range .Fields }}
-			Column{{$.MessageName}}{{.Name}}: {{$.MessageName | lower}}.{{.Name}},
-			{{- end }}
-		}).
-		Where(sq.Eq{Column{{.MessageName}}Id: {{.MessageName | lower}}.Id}).ToSql()
-	if err != nil {
-		return fmt.Errorf("failed to build query: %w", err)
+func (r *repository) UpdateMany{{.MessageName}}(ctx context.Context,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+
+	b = ApplyWhere(b, f)
+
+    b = ApplySet(b, u)
+	
+	query, args := b.MustSql()
+	if _, err := r.db.Exec(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec update query %s with args %v", query, args)
 	}
-	_, err = db.Exec(ctx, query, args...)
-	return err
+	return nil 
+}
+
+
+// Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
+func (r *repository) Update{{.MessageName}}(ctx context.Context,  id uuid.UUID, u  {{.MessageName}}Update) error {
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar).Where(sq.Eq{Column{{.MessageName}}ID: id})
+    b = ApplySet(b, u)
+	query, args := b.MustSql()
+	if _, err := r.db.Exec(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec update query %s with args %v", query, args)
+	}
+	return nil 
 }

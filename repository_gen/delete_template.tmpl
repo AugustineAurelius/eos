@@ -6,17 +6,51 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/google/uuid"
 )
 
 // Delete{{.MessageName}} deletes a {{.MessageName}} by ID.
-func Delete{{.MessageName}}(ctx context.Context, db *pgxpool.Pool, id uuid.UUID) error {
-	query, args, err := sq.Delete(Table{{.MessageName}}).
-		Where(sq.Eq{Column{{.MessageName}}Id: id}).ToSql()
-	if err != nil {
-		return fmt.Errorf("failed to build query: %w", err)
+func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) error {
+	query, args := sq.Delete(Table{{.MessageName}}).
+		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Dollar).MustSql()
+
+	if _, err := r.db.Exec(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec delete query %s with args %v", query, args)
 	}
-	_, err = db.Exec(ctx, query, args...)
-	return err
+	return nil
+}
+
+
+// DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by ID.
+func (r *repository) DeleteMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
+	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+
+	b = ApplyWhere(b, f)
+
+    query, args := 	b.MustSql()
+
+    var {{.MessageName | lower}}s []{{.MessageName}}
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying database: %w", err)
+	}
+	defer rows.Close()
+
+
+	var {{.MessageName | lower}} {{.MessageName}}
+	for rows.Next() {
+		err := rows.Scan(&{{.MessageName | lower}})
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %w", err)
+		}
+		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, {{.MessageName | lower}})
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", rows.Err())
+	}
+
+
+	return {{.MessageName | lower}}s, err
 }

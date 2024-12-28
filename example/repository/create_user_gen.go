@@ -6,17 +6,16 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // CreateUser inserts a new User into the database.
-func CreateUser(ctx context.Context, db *pgxpool.Pool, user *User) error {
-	query, args, err := sq.Insert(TableUser).
-		Columns(ColumnUserId, ColumnUserName, ColumnUserEmail).
-		Values(user.Id, user.Name, user.Email).ToSql()
-	if err != nil {
-		return fmt.Errorf("failed to build query: %w", err)
+func (r *repository) CreateUser(ctx context.Context, user *User) error {
+	query, args := sq.Insert(TableUser).
+		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail).
+		Values(user.ID, user.Name, user.Email).PlaceholderFormat(sq.Dollar).MustSql()
+
+	if _, err := r.db.Exec(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec create query %s with args %v", query, args)
 	}
-	_, err = db.Exec(ctx, query, args...)
-	return err
+	return nil
 }

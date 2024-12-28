@@ -9,7 +9,7 @@ import (
 
 // User represents the User message.
 type UserModel struct {
-	Id uuid.UUID
+	ID uuid.UUID
 	Name string
 	Email string
 }
@@ -17,7 +17,7 @@ type UserModel struct {
 // Table and column name constants for User
 const (
 	TableUser = "users"
-	ColumnUserId = "id"
+	ColumnUserID = "id"
 	ColumnUserName = "name"
 	ColumnUserEmail = "email"
 )
@@ -35,12 +35,12 @@ func (m *UserModel) Scan(value interface{}) error {
 	}
 
 	// Scan each field
-	if val, ok := row[ColumnUserId]; ok {
+	if val, ok := row[ColumnUserID]; ok {
 		switch v := val.(type) {
 		case uuid.UUID:
-			m.Id = v
+			m.ID = v
 		default:
-			return fmt.Errorf("unexpected type for Id: got %T, expected uuid.UUID", val)
+			return fmt.Errorf("unexpected type for ID: got %T, expected uuid.UUID", val)
 		}
 	}
 	if val, ok := row[ColumnUserName]; ok {
@@ -67,7 +67,7 @@ func (m *UserModel) Scan(value interface{}) error {
 func (m UserModel) Value() (driver.Value, error) {
 	// Convert the struct into a map[string]interface{}
 	row := make(map[string]interface{})
-	row[ColumnUserId] = m.Id
+	row[ColumnUserID] = m.ID
 	row[ColumnUserName] = m.Name
 	row[ColumnUserEmail] = m.Email
 	return row, nil
