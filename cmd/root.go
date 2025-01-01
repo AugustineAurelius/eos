@@ -43,6 +43,7 @@ func flags() {
 	builder.Cmd.Flags().StringVarP(&builder.Package, "packege", "p", "generated", "package name")
 	builder.Cmd.Flags().StringVarP(&builder.StructName, "struct", "n", "", "package name")
 
-	repository.Cmd.Flags().StringVarP(&repository.StructName, "type", "t", "", "package name")
+	repository.Cmd.Flags().StringVarP(&repository.StructName, "type", "t", "", "name of the struct for which would be generated repo")
+	repository.Cmd.Flags().BoolVarP(&repository.WithTX, "with_tx", "x", false, "does repo would be with transaction logic")
 
 }

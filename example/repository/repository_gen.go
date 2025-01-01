@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
-type dbconn interface {
+type runner interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
 	Query(ctx context.Context, sql string, optionsAndArgs ...interface{}) (pgx.Rows, error)
@@ -17,17 +17,17 @@ type dbconn interface {
 }
 
 type repository struct{
-	db dbconn
+	db runner
 }
 
-func New(db dbconn) *repository {
+func New(db runner) *repository {
 	return &repository{
 		db: db,
 	}
 }
 
 
-// UserFiler represents the User message.
+// UserFiler represents the User filter.
 type UserFilter struct {
   id *uuid.UUID
   ids []uuid.UUID
@@ -104,7 +104,7 @@ func ApplyWhere[B interface {
   return b
 }
 
-// UserUpdate represents the User message.
+// UserUpdate represents the User update struct.
 type UserUpdate struct {
   id *uuid.UUID
   name *string

@@ -33,7 +33,7 @@ func (r *repository) GetUser(ctx context.Context,  id uuid.UUID) (*User, error) 
 }
 
 
-// GetManyUser retrieves a User by ID.
+// GetManyUser retrieves a User by filter.
 func (r *repository) GetManyUsers(ctx context.Context, f UserFilter) ([]User, error) {
 	b := sq.Select(
 		ColumnUserID,

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AugustineAurelius/eos/builder"
+	"github.com/AugustineAurelius/eos/generator/builder"
 	"github.com/AugustineAurelius/eos/pkg/errors"
 	"github.com/spf13/cobra"
 )

@@ -21,7 +21,7 @@ func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) e
 }
 
 
-// DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by ID.
+// DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
 func (r *repository) DeleteMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
 	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
 

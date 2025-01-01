@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/AugustineAurelius/eos/example/repository"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/AugustineAurelius/eos/example/repository"
 )
 
-// MockDB is a mock implementation of the database interface.
 type MockDB struct {
 	mock.Mock
 }
@@ -41,7 +40,7 @@ func (m *MockDB) QueryRow(ctx context.Context, sql string, optionsAndArgs ...int
 func TestCreateUser(t *testing.T) {
 	testCases := []struct {
 		name          string
-		user          *repository.User
+		user *repository.User
 		mockExpect    func() *MockDB
 		expectedError error
 	}{
@@ -75,7 +74,7 @@ func TestCreateUser(t *testing.T) {
 		t.Run(tc.name, func(tt *testing.T) {
 			err := repository.New(tc.mockExpect()).CreateUser(context.Background(), tc.user)
 
-			if tc.expectedError == nil {
+		 if tc.expectedError == nil {
 				assert.NoError(tt, err)
 			} else {
 				assert.Error(tt, err)
@@ -83,3 +82,5 @@ func TestCreateUser(t *testing.T) {
 		})
 	}
 }
+
+

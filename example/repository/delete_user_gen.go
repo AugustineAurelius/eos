@@ -21,7 +21,7 @@ func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 
-// DeleteManyUser retrieves a User by ID.
+// DeleteManyUser retrieves a User by filter.
 func (r *repository) DeleteManyUsers(ctx context.Context, f UserFilter) ([]User, error) {
 	b := sq.Delete(TableUser).PlaceholderFormat(sq.Dollar)
 

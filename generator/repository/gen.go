@@ -1,4 +1,4 @@
-package repositorygen
+package repository
 
 import (
 	"embed"
@@ -32,9 +32,10 @@ type MessageData struct {
 	Columns      string
 	Placeholders string
 	ModulePath   string
+	WithTx       bool
 }
 
-func Generate(structName string) {
+func Generate(structName string, withTX bool) {
 	filePath := os.Getenv("GOFILE")
 
 	fset := token.NewFileSet()
@@ -59,6 +60,7 @@ func Generate(structName string) {
 		Columns:      strings.Join(getColumns(fields), ", "),
 		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
 		ModulePath:   GetModulePath(),
+		WithTx:       withTX,
 	}
 
 	generateFile("schema.go", "schema_template.tmpl", data)
@@ -72,7 +74,8 @@ func Generate(structName string) {
 
 	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "delete_template.tmpl", data)
 
-	generateFile("repository.go", "repository_template.tmpl", data)
+	generateFile("repository_gen.go", "repository_template.tmpl", data)
+	generateFile("cursor_gen.go", "cursor_template.tmpl", data)
 
 }
 
@@ -99,6 +102,7 @@ func generateFile(fileName, tmplPath string, data MessageData) {
 			}
 			return strings.Join(scanFields, ", ")
 		},
+		"Placeholder": func(index int) string { return fmt.Sprintf("$%d", index+1) },
 	}).Parse(string(tmplContent)) // Convert content to string
 	if err != nil {
 		errors.FailErr(fmt.Errorf("Failed to parse template %s: %v\n", tmplPath, err))

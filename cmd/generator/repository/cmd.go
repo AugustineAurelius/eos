@@ -3,12 +3,13 @@ package repository
 import (
 	"fmt"
 
-	repositorygen "github.com/AugustineAurelius/eos/repository_gen"
+	repositorygen "github.com/AugustineAurelius/eos/generator/repository"
 	"github.com/spf13/cobra"
 )
 
 var (
 	StructName string
+	WithTX     bool
 )
 
 var Cmd = &cobra.Command{
@@ -16,8 +17,8 @@ var Cmd = &cobra.Command{
 	Short: "repository pattern",
 	Long:  `repository`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("start to generate builder pattern for struct")
+		fmt.Println("start to generate repository for struct")
 
-		repositorygen.Generate(StructName)
+		repositorygen.Generate(StructName, WithTX)
 	},
 }

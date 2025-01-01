@@ -13,7 +13,6 @@ import (
 	"{{.ModulePath}}"
 )
 
-// MockDB is a mock implementation of the database interface.
 type MockDB struct {
 	mock.Mock
 }
@@ -75,7 +74,7 @@ func TestCreate{{.MessageName}}(t *testing.T) {
 		t.Run(tc.name, func(tt *testing.T) {
 			err := {{.PackageName}}.New(tc.mockExpect()).Create{{.MessageName}}(context.Background(), tc.{{.MessageName | lower}})
 
-			if tc.expectedError == nil {
+		 if tc.expectedError == nil {
 				assert.NoError(tt, err)
 			} else {
 				assert.Error(tt, err)
@@ -83,3 +82,5 @@ func TestCreate{{.MessageName}}(t *testing.T) {
 		})
 	}
 }
+
+

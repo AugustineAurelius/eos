@@ -33,7 +33,7 @@ func (r *repository) Get{{.MessageName}}(ctx context.Context,  id uuid.UUID) (*{
 }
 
 
-// GetMany{{.MessageName}} retrieves a {{.MessageName}} by ID.
+// GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
 func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
 	b := sq.Select(
 		{{- range .Fields }}
