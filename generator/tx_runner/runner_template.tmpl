@@ -4,7 +4,6 @@ package {{.PackageName}}
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -56,11 +55,11 @@ func (tr *txRunner) RunInTransaction(ctx context.Context, fn func(context.Contex
 	return err
 }
 
-func FromContex(ctx context.Context) (pgx.Tx, error) {
+func FromContex(ctx context.Context) (pgx.Tx, bool) {
 	tx, ok := ctx.Value(TxKey).(pgx.Tx)
 	if !ok {
-		return nil, errors.New("transaction not found in context")
+		return nil, false
 	}
-	return tx, nil
+	return tx, true
 }
 

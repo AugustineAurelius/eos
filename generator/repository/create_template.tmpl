@@ -2,12 +2,11 @@
 package {{.PackageName}}
 
 
-
 {{if .WithTx}}
 import (
 	"context"
 	"fmt"
-	"database/sql"
+	txrunner "{{.PackagePath}}" 
 
 	sq "github.com/Masterminds/squirrel"
 )
@@ -23,15 +22,15 @@ import (
 {{if .WithTx}}
 // Create{{.MessageName}} inserts a new {{.MessageName}} into the database.
 func (r *repository) Create{{.MessageName}}(ctx context.Context, {{.MessageName | lower}} *{{.MessageName}}) error {
-	if tx, ok := ctx.Value(common.TxKey).(*sql.Tx); ok {
-		return create{{.MessageName}}(ctx, tx, {{.MessageName | lower}})
+	if tx, ok := txrunner.FromContex(ctx); ok {
+		return create(ctx, tx, {{.MessageName | lower}})
     } else {
 		return create(ctx, r.db, {{.MessageName | lower}})
     }
 }
 
 
-func create{{.MessageName}}(ctx context.Context, run runner , {{.MessageName | lower}} *{{.MessageName}}) error {
+func create(ctx context.Context, run runner , {{.MessageName | lower}} *{{.MessageName}}) error {
 	query, args := sq.Insert(Table{{.MessageName}}).
 		Columns({{.Fields | columns}}).
 		Values({{.Placeholders}}).PlaceholderFormat(sq.Dollar).MustSql()

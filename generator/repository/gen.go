@@ -32,10 +32,18 @@ type MessageData struct {
 	Columns      string
 	Placeholders string
 	ModulePath   string
+	PackagePath  string
 	WithTx       bool
 }
 
-func Generate(structName string, withTX bool) {
+func Generate(structName, txRunnerPath string, withTX bool) {
+	if withTX && txRunnerPath == "" {
+		errors.FailErr(fmt.Errorf("Missing path to tx runner\n"))
+	}
+	if withTX && !strings.HasPrefix(txRunnerPath, "/") {
+		txRunnerPath = "/" + txRunnerPath
+	}
+
 	filePath := os.Getenv("GOFILE")
 
 	fset := token.NewFileSet()
@@ -60,6 +68,7 @@ func Generate(structName string, withTX bool) {
 		Columns:      strings.Join(getColumns(fields), ", "),
 		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
 		ModulePath:   GetModulePath(),
+		PackagePath:  GetPackagePath() + txRunnerPath,
 		WithTx:       withTX,
 	}
 
@@ -191,22 +200,28 @@ func getPlaceholders(structName string, fields []Field) []string {
 }
 
 func GetModulePath() string {
-	// Get the path to the go.mod file
 	goModPath, _ := exec.Command("go", "env", "GOMOD").Output()
 	goModPathStr := strings.TrimSpace(string(goModPath))
 
-	// Read the go.mod file to get the module path
 	data, _ := os.ReadFile(goModPathStr)
 	moduleLine := strings.Split(string(data), "\n")[0]
 	modulePath := strings.TrimPrefix(moduleLine, "module ")
 
-	// Get the current file's directory
 	currentDir, _ := os.Getwd()
 
-	// Get the relative path of the current directory within the module
 	relPath, _ := filepath.Rel(filepath.Dir(goModPathStr), currentDir)
 
-	// Construct the import path
 	importPath := filepath.Join(modulePath, relPath)
 	return importPath
+}
+
+func GetPackagePath() string {
+	goModPath, _ := exec.Command("go", "env", "GOMOD").Output()
+	goModPathStr := strings.TrimSpace(string(goModPath))
+
+	data, _ := os.ReadFile(goModPathStr)
+	moduleLine := strings.Split(string(data), "\n")[0]
+	modulePath := strings.TrimPrefix(moduleLine, "module ")
+
+	return modulePath
 }
