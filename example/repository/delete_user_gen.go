@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	txrunner "github.com/AugustineAurelius/eos/example/tx_runner" 
+ 	common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
     }
 }
 
-func delete(ctx context.Context, run runner,id uuid.UUID) error {
+func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 	query, args := sq.Delete(TableUser).
 		Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Dollar).MustSql()
 
@@ -41,7 +42,7 @@ func (r *repository) DeleteManyUser(ctx context.Context, f UserFilter) error {
     }
 }
 
-func deleteMany(ctx context.Context,run runner, f UserFilter) error {
+func deleteMany(ctx context.Context, run common.Querier, f UserFilter) error {
 	b := sq.Delete(TableUser).PlaceholderFormat(sq.Dollar)
 
 	b = ApplyWhere(b, f)

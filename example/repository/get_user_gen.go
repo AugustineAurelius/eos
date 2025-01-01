@@ -5,10 +5,8 @@ package repository
 import (
 	"context"
 	"fmt"
-
-	txrunner "github.com/AugustineAurelius/eos/example/tx_runner" 
-
-
+	txrunner "github.com/AugustineAurelius/eos/example/tx_runner"
+  common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -26,7 +24,7 @@ func (r *repository) GetUser(ctx context.Context,  id uuid.UUID) (*User, error) 
 }
 
 
-func get(ctx context.Context, run runner, id uuid.UUID) (*User, error){
+func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 	query, args := sq.Select(
 		ColumnUserID,
 		ColumnUserName,
@@ -58,7 +56,7 @@ func (r *repository) GetManyUsers(ctx context.Context, f UserFilter) ([]User, er
     }
 }
 
-func getMany(ctx context.Context, run runner, f UserFilter) ([]User, error) {
+func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, error) {
 	b := sq.Select(
 		ColumnUserID,
 		ColumnUserName,

@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var CommonPath string
+
 var Cmd = &cobra.Command{
 	Use:   "tx",
 	Short: "tx runner pattern",
@@ -14,6 +16,6 @@ var Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start to generate tx runner")
 
-		txrunner.Generate()
+		txrunner.Generate(CommonPath)
 	},
 }

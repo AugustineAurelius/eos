@@ -6,7 +6,8 @@ package {{.PackageName}}
 import (
 	"context"
 	"fmt"
-	txrunner "{{.PackagePath}}" 
+	txrunner "{{.TxRunnerPath}}" 
+	common "{{.CommonPath}}"
 
 	sq "github.com/Masterminds/squirrel"
 )
@@ -30,7 +31,7 @@ func (r *repository) Create{{.MessageName}}(ctx context.Context, {{.MessageName 
 }
 
 
-func create(ctx context.Context, run runner , {{.MessageName | lower}} *{{.MessageName}}) error {
+func create(ctx context.Context, run common.Querier, {{.MessageName | lower}} *{{.MessageName}}) error {
 	query, args := sq.Insert(Table{{.MessageName}}).
 		Columns({{.Fields | columns}}).
 		Values({{.Placeholders}}).PlaceholderFormat(sq.Dollar).MustSql()

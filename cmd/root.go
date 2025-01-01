@@ -7,6 +7,7 @@ import (
 	"github.com/AugustineAurelius/eos/cmd/generator"
 	"github.com/AugustineAurelius/eos/cmd/generator/builder"
 	"github.com/AugustineAurelius/eos/cmd/generator/repository"
+	txrunner "github.com/AugustineAurelius/eos/cmd/generator/tx_runner"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,10 @@ func flags() {
 
 	repository.Cmd.Flags().StringVarP(&repository.StructName, "type", "t", "", "name of the struct for which would be generated repo")
 	repository.Cmd.Flags().StringVarP(&repository.TxRunenrPath, "tx_path", "p", "", "path to txrunner impl")
-
+	repository.Cmd.Flags().StringVarP(&repository.CommonPath, "common_path", "c", "", "path to common")
 	repository.Cmd.Flags().BoolVarP(&repository.WithTX, "with_tx", "x", false, "does repo would be with transaction logic")
+	repository.Cmd.MarkPersistentFlagRequired("common_path")
 
+	txrunner.Cmd.Flags().StringVarP(&txrunner.CommonPath, "common_path", "c", "", "path to common")
+	txrunner.Cmd.MarkPersistentFlagRequired("common_path")
 }

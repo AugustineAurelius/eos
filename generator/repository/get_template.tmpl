@@ -5,10 +5,8 @@ package {{.PackageName}}
 import (
 	"context"
 	"fmt"
-
-	txrunner "{{.PackagePath}}" 
-
-
+	txrunner "{{.TxRunnerPath}}"
+  common "{{.CommonPath}}"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -34,7 +32,7 @@ func (r *repository) Get{{.MessageName}}(ctx context.Context,  id uuid.UUID) (*{
 }
 
 
-func get(ctx context.Context, run runner, id uuid.UUID) (*{{.MessageName}}, error){
+func get(ctx context.Context, run common.Querier, id uuid.UUID) (*{{.MessageName}}, error){
 	query, args := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
@@ -66,7 +64,7 @@ func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageN
     }
 }
 
-func getMany(ctx context.Context, run runner, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
+func getMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
 	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},

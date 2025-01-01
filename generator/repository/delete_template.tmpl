@@ -5,7 +5,8 @@ package {{.PackageName}}
 import (
 	"context"
 	"fmt"
-	txrunner "{{.PackagePath}}" 
+	txrunner "{{.TxRunnerPath}}" 
+ 	common "{{.CommonPath}}"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -30,7 +31,7 @@ func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) e
     }
 }
 
-func delete(ctx context.Context, run runner,id uuid.UUID) error {
+func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 	query, args := sq.Delete(Table{{.MessageName}}).
 		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Dollar).MustSql()
 
@@ -49,7 +50,7 @@ func (r *repository) DeleteMany{{.MessageName}}(ctx context.Context, f {{.Messag
     }
 }
 
-func deleteMany(ctx context.Context,run runner, f {{.MessageName}}Filter) error {
+func deleteMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) error {
 	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
 
 	b = ApplyWhere(b, f)

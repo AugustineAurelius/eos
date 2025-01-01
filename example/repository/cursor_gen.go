@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"errors"
+	common "github.com/AugustineAurelius/eos/example/common" 
+
 
 	sq "github.com/Masterminds/squirrel"
 )
@@ -19,7 +21,7 @@ type builderParams struct {
 }
 
 type Cursor struct {
-	pool      runner 
+	pool      common.Querier
 	builder   sq.SelectBuilder
 	rows      []UserModel
 	index     int

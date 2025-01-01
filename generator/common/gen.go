@@ -1,4 +1,4 @@
-package txrunner
+package common
 
 import (
 	"embed"
@@ -10,7 +10,6 @@ import (
 	"text/template"
 
 	"github.com/AugustineAurelius/eos/pkg/errors"
-	"github.com/AugustineAurelius/eos/pkg/helpers"
 )
 
 //go:embed *
@@ -18,16 +17,9 @@ var templateFS embed.FS
 
 type MessageData struct {
 	PackageName string
-	CommonPath  string
 }
 
-func Generate(commonPath string) {
-	if commonPath == "" {
-		errors.FailErr(fmt.Errorf("Missing path to common package\n"))
-	}
-	if !strings.HasPrefix(commonPath, "/") {
-		commonPath = "/" + commonPath
-	}
+func Generate() {
 	filePath := os.Getenv("GOFILE")
 
 	fset := token.NewFileSet()
@@ -40,10 +32,9 @@ func Generate(commonPath string) {
 
 	data := MessageData{
 		PackageName: packageName,
-		CommonPath:  helpers.GetModulePath() + commonPath,
 	}
 
-	generateFile("tx_runner.go", "runner_template.tmpl", data)
+	generateFile("database_gen.go", "database_template.tmpl", data)
 
 }
 

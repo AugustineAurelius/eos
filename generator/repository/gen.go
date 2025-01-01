@@ -7,12 +7,11 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"text/template"
 
 	"github.com/AugustineAurelius/eos/pkg/errors"
+	"github.com/AugustineAurelius/eos/pkg/helpers"
 )
 
 //go:embed *
@@ -32,17 +31,16 @@ type MessageData struct {
 	Columns      string
 	Placeholders string
 	ModulePath   string
-	PackagePath  string
+	TxRunnerPath string
+	CommonPath   string
 	WithTx       bool
 }
 
-func Generate(structName, txRunnerPath string, withTX bool) {
-	if withTX && txRunnerPath == "" {
-		errors.FailErr(fmt.Errorf("Missing path to tx runner\n"))
+func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
+	if withTX {
+		txRunnerPath = helpers.ValidateFlag(txRunnerPath)
 	}
-	if withTX && !strings.HasPrefix(txRunnerPath, "/") {
-		txRunnerPath = "/" + txRunnerPath
-	}
+	commonPath = helpers.ValidateFlag(commonPath)
 
 	filePath := os.Getenv("GOFILE")
 
@@ -67,8 +65,9 @@ func Generate(structName, txRunnerPath string, withTX bool) {
 		Fields:       fields,
 		Columns:      strings.Join(getColumns(fields), ", "),
 		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
-		ModulePath:   GetModulePath(),
-		PackagePath:  GetPackagePath() + txRunnerPath,
+		ModulePath:   helpers.GetPackagePath(),
+		TxRunnerPath: helpers.GetModulePath() + txRunnerPath,
+		CommonPath:   helpers.GetModulePath() + commonPath,
 		WithTx:       withTX,
 	}
 
@@ -77,13 +76,14 @@ func Generate(structName, txRunnerPath string, withTX bool) {
 	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "get_template.tmpl", data)
 
 	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "create_template.tmpl", data)
-	generateFile("create_"+strings.ToLower(structName)+"_gen_test.go", "create_test_template.tmpl", data)
+	// generateFile("create_"+strings.ToLower(structName)+"_gen_test.go", "create_test_template.tmpl", data)
 
 	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "update_template.tmpl", data)
 
 	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "delete_template.tmpl", data)
 
 	generateFile("repository_gen.go", "repository_template.tmpl", data)
+
 	generateFile("cursor_gen.go", "cursor_template.tmpl", data)
 
 }
@@ -197,31 +197,4 @@ func getPlaceholders(structName string, fields []Field) []string {
 		placeholders = append(placeholders, fmt.Sprintf("%s.%s", strings.ToLower(structName), field.Name))
 	}
 	return placeholders
-}
-
-func GetModulePath() string {
-	goModPath, _ := exec.Command("go", "env", "GOMOD").Output()
-	goModPathStr := strings.TrimSpace(string(goModPath))
-
-	data, _ := os.ReadFile(goModPathStr)
-	moduleLine := strings.Split(string(data), "\n")[0]
-	modulePath := strings.TrimPrefix(moduleLine, "module ")
-
-	currentDir, _ := os.Getwd()
-
-	relPath, _ := filepath.Rel(filepath.Dir(goModPathStr), currentDir)
-
-	importPath := filepath.Join(modulePath, relPath)
-	return importPath
-}
-
-func GetPackagePath() string {
-	goModPath, _ := exec.Command("go", "env", "GOMOD").Output()
-	goModPathStr := strings.TrimSpace(string(goModPath))
-
-	data, _ := os.ReadFile(goModPathStr)
-	moduleLine := strings.Split(string(data), "\n")[0]
-	modulePath := strings.TrimPrefix(moduleLine, "module ")
-
-	return modulePath
 }

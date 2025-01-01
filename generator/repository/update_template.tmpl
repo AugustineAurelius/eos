@@ -5,7 +5,8 @@ package {{.PackageName}}
 import (
 	"context"
 	"fmt"
-	txrunner "{{.PackagePath}}" 
+	txrunner "{{.TxRunnerPath}}" 
+  common "{{.CommonPath}}"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -31,7 +32,7 @@ func (r *repository) Update{{.MessageName}}(ctx context.Context,  id uuid.UUID, 
     }
 }
 
-func update(ctx context.Context, run runner, id uuid.UUID, u {{.MessageName}}Update) error {
+func update(ctx context.Context, run common.Querier, id uuid.UUID, u {{.MessageName}}Update) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar).Where(sq.Eq{Column{{.MessageName}}ID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
@@ -50,7 +51,7 @@ func (r *repository) UpdateMany{{.MessageName}}(ctx context.Context,  f {{.Messa
     }
 }
 
-func updateMany(ctx context.Context, run runner,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
+func updateMany(ctx context.Context, run common.Querier,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
 
 	b = ApplyWhere(b, f)

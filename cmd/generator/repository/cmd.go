@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	StructName, TxRunenrPath string
-	WithTX                   bool
+	StructName, TxRunenrPath, CommonPath string
+	WithTX                               bool
 )
 
 var Cmd = &cobra.Command{
@@ -19,6 +19,6 @@ var Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start to generate repository for struct")
 
-		repositorygen.Generate(StructName, TxRunenrPath, WithTX)
+		repositorygen.Generate(StructName, TxRunenrPath, CommonPath, WithTX)
 	},
 }

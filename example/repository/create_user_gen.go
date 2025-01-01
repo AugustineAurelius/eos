@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	txrunner "github.com/AugustineAurelius/eos/example/tx_runner" 
+	common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
 )
@@ -23,7 +24,7 @@ func (r *repository) CreateUser(ctx context.Context, user *User) error {
 }
 
 
-func create(ctx context.Context, run runner , user *User) error {
+func create(ctx context.Context, run common.Querier, user *User) error {
 	query, args := sq.Insert(TableUser).
 		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail).
 		Values(user.ID, user.Name, user.Email).PlaceholderFormat(sq.Dollar).MustSql()

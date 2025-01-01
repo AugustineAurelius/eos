@@ -2,24 +2,17 @@
 package repository
 
 import (
-	"context"
-
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	common "github.com/AugustineAurelius/eos/example/common"
 )
-type runner interface {
-	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, optionsAndArgs ...interface{}) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, optionsAndArgs ...interface{}) pgx.Row
-}
+
 
 type repository struct{
-	db runner
+	db common.Database 
 }
 
-func New(db runner) *repository {
+func New(db common.Database) *repository {
 	return &repository{
 		db: db,
 	}
