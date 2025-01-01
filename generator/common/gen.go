@@ -35,6 +35,8 @@ func Generate() {
 	}
 
 	generateFile("database_gen.go", "database_template.tmpl", data)
+	generateFile("sqlite_gen.go", "sqlite_template.tmpl", data)
+	generateFile("postgres_gen.go", "postgres_template.tmpl", data)
 
 }
 
