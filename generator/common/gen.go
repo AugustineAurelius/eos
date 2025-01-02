@@ -38,7 +38,7 @@ func Generate() {
 	generateFile("sqlite_gen.go", "sqlite_template.tmpl", data)
 	generateFile("postgres_gen.go", "postgres_template.tmpl", data)
 	generateFile("cassandra_gen.go", "cassandra_template.tmpl", data)
-	// generateFile("clickhouse_gen.go", "clickhouse_template.tmpl", data)
+	generateFile("clickhouse_gen.go", "clickhouse_template.tmpl", data)
 
 }
 
