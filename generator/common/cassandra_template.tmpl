@@ -26,7 +26,7 @@ type CassandraDatabase struct {
 	session *gocql.Session
 }
 
-func NewCassandraDatabase(cp CassandraConnectionProvider) (*CassandraDatabase, error) {
+func NewCassandraDatabase(cp CassandraConnectionProvider) (CassandraDatabase, error) {
 	cluster := gocql.NewCluster(cp.Hosts...)
 	cluster.RetryPolicy = &gocql.SimpleRetryPolicy{
 		NumRetries: 3,
@@ -40,9 +40,9 @@ func NewCassandraDatabase(cp CassandraConnectionProvider) (*CassandraDatabase, e
 	cluster.Keyspace = cp.Keyspace
 	session, err := cluster.CreateSession()
 	if err != nil {
-		return nil, err
+		return CassandraDatabase{}, err
 	}
-	return &CassandraDatabase{
+	return CassandraDatabase{
 		session: session,
 	}, nil
 }
