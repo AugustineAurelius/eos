@@ -2,10 +2,18 @@
 package {{.PackageName}}
 
 import (
-	"database/sql/driver"
-	"fmt"
 	"github.com/google/uuid"
 )
+
+// Table and column name constants for {{.MessageName}}
+const (
+	Table{{.MessageName}} = "{{.TableName}}"
+{{- range .Fields }}
+	Column{{$.MessageName}}{{.Name}} = "{{.Column}}"
+{{- end }}
+)
+
+
 
 // {{.MessageName}} represents the {{.MessageName}} message.
 type {{.MessageName}}Model struct {
@@ -36,49 +44,4 @@ func ReverseConverter({{.MessageName | lower}}Model {{.MessageName}}Model) {{.Me
 			{{.Name}}: {{$.MessageName | lower}}Model.{{.Name}}, 
 		{{- end }}
 	}
-}
-
-// Table and column name constants for {{.MessageName}}
-const (
-	Table{{.MessageName}} = "{{.TableName}}"
-{{- range .Fields }}
-	Column{{$.MessageName}}{{.Name}} = "{{.Column}}"
-{{- end }}
-)
-
-// Scan implements the Scanner interface for {{.MessageName}}Model.
-func (m *{{.MessageName}}Model) Scan(value interface{}) error {
-	if value == nil {
-		return nil
-	}
-
-	// Assuming the value is a map[string]interface{} representing the row
-	row, ok := value.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("expected map[string]interface{}, got %T", value)
-	}
-
-	// Scan each field
-{{- range .Fields }}
-	if val, ok := row[Column{{$.MessageName}}{{.Name}}]; ok {
-		switch v := val.(type) {
-		case {{.Type}}:
-			m.{{.Name}} = v
-		default:
-			return fmt.Errorf("unexpected type for {{.Name}}: got %T, expected {{.Type}}", val)
-		}
-	}
-{{- end }}
-
-	return nil
-}
-
-// Value implements the Valuer interface for {{.MessageName}}Model.
-func (m {{.MessageName}}Model) Value() (driver.Value, error) {
-	// Convert the struct into a map[string]interface{}
-	row := make(map[string]interface{})
-{{- range .Fields }}
-	row[Column{{$.MessageName}}{{.Name}}] = m.{{.Name}}
-{{- end }}
-	return row, nil
 }
