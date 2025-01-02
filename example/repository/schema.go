@@ -17,9 +17,15 @@ const (
 
 // User represents the User message.
 type UserModel struct {
-	ID uuid.UUID
-	Name string
-	Email string
+	
+		ID string
+	
+	
+		Name string
+	
+	
+		Email string
+	
 }
 
 func (m UserModel) Values() []any {
@@ -32,16 +38,28 @@ func (m UserModel) Values() []any {
 
 func Converter(user User) UserModel {
 	return UserModel {
-			ID: user.ID,
-			Name: user.Name,
-			Email: user.Email,
+			
+		ID: user.ID.String(),
+			
+			
+		Name: user.Name, 
+			
+			
+		Email: user.Email, 
+			
 	}
 }
 
 func ReverseConverter(userModel UserModel) User {
 	return User {
-			ID: userModel.ID,
-			Name: userModel.Name,
-			Email: userModel.Email,
+			
+		ID: uuid.MustParse(userModel.ID),
+			
+			
+		Name: userModel.Name, 
+			
+			
+		Email: userModel.Email, 
+				
 	}
 }

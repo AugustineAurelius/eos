@@ -31,7 +31,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 		ColumnUserEmail,
 	).
 	From(TableUser).
-	Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Dollar).MustSql()
+	Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Question).MustSql()
 
 	var userModel UserModel
 	err := run.QueryRow(ctx, query, args...).Scan(
@@ -64,7 +64,7 @@ func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, err
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-	).From(TableUser).PlaceholderFormat(sq.Dollar)
+	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

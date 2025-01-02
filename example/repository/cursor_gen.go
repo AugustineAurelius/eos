@@ -46,7 +46,7 @@ func (r *repository) NewCursor(ctx context.Context, f UserFilter, params builder
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-	).From(TableUser).PlaceholderFormat(sq.Dollar)
+	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

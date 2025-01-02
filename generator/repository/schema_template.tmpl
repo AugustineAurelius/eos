@@ -18,7 +18,11 @@ const (
 // {{.MessageName}} represents the {{.MessageName}} message.
 type {{.MessageName}}Model struct {
 {{- range .Fields }}
-	{{.Name}} {{.Type}}
+	{{if eq .Name "ID" }}
+		{{.Name}} string
+	{{else}}
+		{{.Name}} {{.Type}}
+	{{end}}
 {{- end }}
 }
 
@@ -33,7 +37,11 @@ func (m {{.MessageName}}Model) Values() []any {
 func Converter({{.MessageName | lower}} {{.MessageName}}) {{.MessageName}}Model {
 	return {{.MessageName}}Model {
 		{{- range .Fields }}
-			{{.Name}}: {{$.MessageName | lower}}.{{.Name}}, 
+			{{if eq .Name "ID"}}
+		{{.Name}}: {{$.MessageName | lower}}.{{.Name}}.String(),
+			{{else}}
+		{{.Name}}: {{$.MessageName | lower}}.{{.Name}}, 
+			{{end}}
 		{{- end }}
 	}
 }
@@ -41,7 +49,11 @@ func Converter({{.MessageName | lower}} {{.MessageName}}) {{.MessageName}}Model 
 func ReverseConverter({{.MessageName | lower}}Model {{.MessageName}}Model) {{.MessageName}} {
 	return {{.MessageName}} {
 		{{- range .Fields }}
-			{{.Name}}: {{$.MessageName | lower}}Model.{{.Name}}, 
-		{{- end }}
+			{{if eq .Name "ID"}}
+		{{.Name}}: uuid.MustParse({{$.MessageName | lower}}Model.{{.Name}}),
+			{{else}}
+		{{.Name}}: {{$.MessageName | lower}}Model.{{.Name}}, 
+			{{end}}
+		{{- end }}	
 	}
 }

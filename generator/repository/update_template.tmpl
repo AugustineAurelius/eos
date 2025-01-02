@@ -33,7 +33,7 @@ func (r *repository) Update{{.MessageName}}(ctx context.Context,  id uuid.UUID, 
 }
 
 func update(ctx context.Context, run common.Querier, id uuid.UUID, u {{.MessageName}}Update) error {
-    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar).Where(sq.Eq{Column{{.MessageName}}ID: id})
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question).Where(sq.Eq{Column{{.MessageName}}ID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
 	if _, err := run.Exec(ctx, query, args...); err != nil {
@@ -52,7 +52,7 @@ func (r *repository) UpdateMany{{.MessageName}}(ctx context.Context,  f {{.Messa
 }
 
 func updateMany(ctx context.Context, run common.Querier,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
-    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 
@@ -67,7 +67,7 @@ func updateMany(ctx context.Context, run common.Querier,  f {{.MessageName}}Filt
 {{else}}
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
 func (r *repository) Update{{.MessageName}}(ctx context.Context,  id uuid.UUID, u  {{.MessageName}}Update) error {
-    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar).Where(sq.Eq{Column{{.MessageName}}ID: id})
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question).Where(sq.Eq{Column{{.MessageName}}ID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {
@@ -78,7 +78,7 @@ func (r *repository) Update{{.MessageName}}(ctx context.Context,  id uuid.UUID, 
 
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
 func (r *repository) UpdateMany{{.MessageName}}(ctx context.Context,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
-    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

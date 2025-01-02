@@ -33,7 +33,7 @@ func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) e
 
 func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 	query, args := sq.Delete(Table{{.MessageName}}).
-		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Dollar).MustSql()
+		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question).MustSql()
 
 	if _, err := run.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec delete query %s with args %v error = %w", query, args, err)
@@ -51,7 +51,7 @@ func (r *repository) DeleteMany{{.MessageName}}(ctx context.Context, f {{.Messag
 }
 
 func deleteMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) error {
-	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 
@@ -69,7 +69,7 @@ func deleteMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filte
 // Delete{{.MessageName}} deletes a {{.MessageName}} by ID.
 func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) error {
 	query, args := sq.Delete(Table{{.MessageName}}).
-		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Dollar).MustSql()
+		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question).MustSql()
 
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec delete query %s with args %v error = %w", query, args, err)
@@ -79,7 +79,7 @@ func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) e
 
 // DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
 func (r *repository) DeleteMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) error {
-	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

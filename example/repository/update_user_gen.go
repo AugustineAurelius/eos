@@ -25,7 +25,7 @@ func (r *repository) UpdateUser(ctx context.Context,  id uuid.UUID, u UserUpdate
 }
 
 func update(ctx context.Context, run common.Querier, id uuid.UUID, u UserUpdate) error {
-    b:= sq.Update(TableUser).PlaceholderFormat(sq.Dollar).Where(sq.Eq{ColumnUserID: id})
+    b:= sq.Update(TableUser).PlaceholderFormat(sq.Question).Where(sq.Eq{ColumnUserID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
 	if _, err := run.Exec(ctx, query, args...); err != nil {
@@ -44,7 +44,7 @@ func (r *repository) UpdateManyUser(ctx context.Context,  f UserFilter, u  UserU
 }
 
 func updateMany(ctx context.Context, run common.Querier,  f UserFilter, u  UserUpdate) error {
-    b:= sq.Update(TableUser).PlaceholderFormat(sq.Dollar)
+    b:= sq.Update(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

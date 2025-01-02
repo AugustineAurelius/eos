@@ -25,7 +25,7 @@ func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 
 func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 	query, args := sq.Delete(TableUser).
-		Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Dollar).MustSql()
+		Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Question).MustSql()
 
 	if _, err := run.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec delete query %s with args %v error = %w", query, args, err)
@@ -43,7 +43,7 @@ func (r *repository) DeleteManyUser(ctx context.Context, f UserFilter) error {
 }
 
 func deleteMany(ctx context.Context, run common.Querier, f UserFilter) error {
-	b := sq.Delete(TableUser).PlaceholderFormat(sq.Dollar)
+	b := sq.Delete(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

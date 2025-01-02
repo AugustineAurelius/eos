@@ -2,10 +2,12 @@ package repository_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/cassandra"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 
@@ -55,12 +57,13 @@ func Test_WithPostgres(t *testing.T) {
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).WithStartupTimeout(5*time.Second)),
 	)
+	defer c.Terminate(ctx)
 	assert.NoError(t, err)
 
 	connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 	assert.NoError(t, err)
 
-	db, err := common.NewPostgres(ctx, &common.PgxConnectionProvider{connStr})
+	db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr})
 	assert.NoError(t, err)
 
 	_, err = db.Exec(ctx, `CREATE TABLE users (
@@ -84,4 +87,48 @@ func Test_WithPostgres(t *testing.T) {
 	users, err := userRepo.GetManyUsers(ctx, *f)
 	assert.NoError(t, err)
 	assert.Equal(t, []repository.User{*testUser}, users)
+}
+
+func Test_WithCassandra(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
+		testcontainers.WithEnv(map[string]string{
+			"CASSANDRA_HOST":     "cassandra",
+			"CASSANDRA_USER":     "ming",
+			"CASSANDRA_PASSWORD": "cassandrapass",
+		}))
+	defer c.Terminate(ctx)
+	assert.NoError(t, err)
+
+	host, err := c.ConnectionHost(ctx)
+	assert.NoError(t, err)
+
+	db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
+		Hosts:    []string{host},
+		Port:     9042,
+		User:     "ming",
+		Password: "cassandrapass",
+		Keyspace: "roster",
+	})
+	assert.NoError(t, err)
+
+	userRepo := repository.New(db)
+
+	id, _ := uuid.NewUUID()
+	fmt.Println(id.Version(), id.Variant())
+
+	testUser := &repository.User{ID: id, Name: "name", Email: "email"}
+	err = userRepo.CreateUser(ctx, testUser)
+	assert.NoError(t, err)
+
+	user, err := userRepo.GetUser(ctx, id)
+	assert.NoError(t, err)
+	assert.Equal(t, testUser, user)
+
+	f := repository.NewFilter().AddOneToIDs(id)
+	users, err := userRepo.GetManyUsers(ctx, *f)
+	assert.NoError(t, err)
+	assert.Equal(t, []repository.User{*testUser}, users)
+
 }

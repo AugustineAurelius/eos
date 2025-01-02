@@ -20,7 +20,7 @@ type SqliteDB struct {
     db *sql.DB
 }
 
-func NewSqlite(ctx context.Context, provider ConnectionProvider) (SqliteDB, error){
+func NewSqlite(ctx context.Context, provider SqliteConnectionProvider) (SqliteDB, error){
     url := provider.GetConnectionURL()
     db, err := sql.Open("sqlite3", url)
     if err != nil {

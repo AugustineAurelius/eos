@@ -46,7 +46,7 @@ func (r *repository) NewCursor(ctx context.Context, f {{.MessageName}}Filter, pa
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
 

@@ -3,6 +3,8 @@ package {{.PackageName}}
 
 import (
 	"context"
+	"regexp"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -21,7 +23,7 @@ type PgxPoolDB struct {
 	pool *pgxpool.Pool
 }
 
-func NewPostgres(ctx context.Context, provider ConnectionProvider) (PgxPoolDB, error){
+func NewPostgres(ctx context.Context, provider PgxConnectionProvider) (PgxPoolDB, error){
 	url := provider.GetConnectionURL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
@@ -36,7 +38,7 @@ func (p *PgxPoolDB) Close() error {
 }
 
 func (p *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
-	rows, err := p.pool.Query(ctx, query, args...)
+	rows, err := p.pool.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +46,11 @@ func (p *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows,
 }
 
 func (p *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) row {
-	return p.pool.QueryRow(ctx, query, args...)
+	return p.pool.QueryRow(ctx, ReplaceQuestions(query), args...)
 }
 
 func (p *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
-	r, err := p.pool.Exec(ctx, query, args...)
+	r, err := p.pool.Exec(ctx, ReplaceQuestions(query), args...)
 	return &PgxResult{r}, err
 }
 
@@ -86,7 +88,7 @@ type PgxTx struct {
 }
 
 func (p *PgxTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
-	rows, err := p.Tx.Query(ctx, query, args...)
+	rows, err := p.Tx.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -94,11 +96,11 @@ func (p *PgxTx) Query(ctx context.Context, query string, args ...any) (rows, err
 }
 
 func (p *PgxTx) QueryRow(ctx context.Context, query string, args ...any) row {
-	return p.Tx.QueryRow(ctx, query, args...)
+	return p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)
 }
 
 func (p *PgxTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
-	r, err := p.Tx.Exec(ctx, query, args...)
+	r, err := p.Tx.Exec(ctx, ReplaceQuestions(query), args...)
 	return &PgxResult{r}, err
 }
 
@@ -116,4 +118,14 @@ type PgxResult struct {
 
 func (r *PgxResult) RowsAffected() (int64, error) {
 	return r.CommandTag.RowsAffected(), nil
+}
+
+
+func ReplaceQuestions(query string) string {
+    var count int
+    re := regexp.MustCompile(`\?`)
+    return re.ReplaceAllStringFunc(query, func(s string) string {
+        count++
+        return "$" + strconv.Itoa(count)
+    })
 }
