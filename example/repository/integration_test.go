@@ -2,7 +2,6 @@ package repository_test
 
 import (
 	"context"
-	"log"
 	"testing"
 	"time"
 
@@ -68,9 +67,7 @@ func Test_WithPostgres(t *testing.T) {
         id UUID PRIMARY KEY,
         name TEXT,
         email TEXT);`)
-	if err != nil {
-		log.Fatalf("Could not create table: %v", err)
-	}
+	assert.NoError(t, err)
 
 	userRepo := repository.New(&db)
 
