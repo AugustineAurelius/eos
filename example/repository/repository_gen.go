@@ -18,7 +18,6 @@ func New(db common.Querier) *repository {
 	}
 }
 
-
 // UserFiler represents the User filter.
 type UserFilter struct {
   id *uuid.UUID
@@ -27,6 +26,10 @@ type UserFilter struct {
   names []string
   email *string
   emails []string
+}
+
+func NewFilter() *UserFilter{
+	return &UserFilter{}
 }
 func (f *UserFilter) ID (id uuid.UUID)  *UserFilter {
   f.id = &id

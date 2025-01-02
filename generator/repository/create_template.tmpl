@@ -32,9 +32,10 @@ func (r *repository) Create{{.MessageName}}(ctx context.Context, {{.MessageName 
 
 
 func create(ctx context.Context, run common.Querier, {{.MessageName | lower}} *{{.MessageName}}) error {
+	model := Converter(*{{.MessageName | lower}})
 	query, args := sq.Insert(Table{{.MessageName}}).
 		Columns({{.Fields | columns}}).
-		Values({{.Placeholders}}).PlaceholderFormat(sq.Dollar).MustSql()
+		Values(model.Values()...).PlaceholderFormat(sq.Dollar).MustSql()
 
 	if _, err := run.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
@@ -44,11 +45,12 @@ func create(ctx context.Context, run common.Querier, {{.MessageName | lower}} *{
 {{else}}
 // Create{{.MessageName}} inserts a new {{.MessageName}} into the database.
 func (r *repository) Create{{.MessageName}}(ctx context.Context,  {{.MessageName | lower}} *{{.MessageName}}) error {
+	model := Converter(*{{.MessageName | lower}})
 	query, args := sq.Insert(Table{{.MessageName}}).
 		Columns({{.Fields | columns}}).
-		Values({{.Placeholders}}).PlaceholderFormat(sq.Dollar).MustSql()
+		Values(model.Values()...).PlaceholderFormat(sq.Dollar).MustSql()
 
-	if _, err := r.db.Exec(ctx, query, args...); err != nil {
+	if _, err := run.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
 	}
 	return nil

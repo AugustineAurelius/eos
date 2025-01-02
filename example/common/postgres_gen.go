@@ -21,14 +21,13 @@ type PgxPoolDB struct {
 	pool *pgxpool.Pool
 }
 
-func (p *PgxPoolDB) Connect(ctx context.Context, provider ConnectionProvider) error {
+func NewPostgres(ctx context.Context, provider ConnectionProvider) (PgxPoolDB, error){
 	url := provider.GetConnectionURL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
-		return err
+		return PgxPoolDB{}, err
 	}
-	p.pool = pool
-	return nil
+	return PgxPoolDB{pool}, nil
 }
 
 func (p *PgxPoolDB) Close() error {
@@ -75,7 +74,6 @@ func (p *PgxRows) Scan(dest ...any) error {
 
 func (p *PgxRows) Close() error {
 	p.Rows.Close()
-
 	return nil
 }
 

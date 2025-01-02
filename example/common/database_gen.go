@@ -3,27 +3,31 @@ package common
 
 import (
 	"context"
+	"io"
 )
 
+// For configuration
 type ConnectionProvider interface {
 	GetConnectionURL() string
 }
 
+type Database interface {
+	io.Closer
+	Querier
+	Begginer
+}
+
+// Query
 type Querier interface {
 	Query(ctx context.Context, query string, args ...any) (rows, error)
 	QueryRow(ctx context.Context, query string, args ...any) row
 	Exec(ctx context.Context, query string, args ...any) (result, error)
 }
 
-type Database interface {
-	Querier
-	Begin(ctx context.Context) (Tx, error)
-}
-
 type rows interface {
+	io.Closer
+	row
 	Err() error
-	Close() error
-	Scan(dest ...any) error
 	Next() bool
 }
 
@@ -31,12 +35,17 @@ type row interface {
 	Scan(dest ...any) error
 }
 
+type result interface {
+	RowsAffected() (int64, error)
+}
+
+// Transaction
+type Begginer interface {
+	Begin(ctx context.Context) (Tx, error)
+}
+
 type Tx interface {
 	Querier
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
-}
-
-type result interface {
-	RowsAffected() (int64, error)
 }

@@ -10,10 +10,10 @@ import (
 var TxKey = struct{}{}
 
 type txRunner struct {
-	db common.Database 
+	db common.Begginer
 }
 
-func New(db common.Database) *txRunner {
+func New(db common.Begginer) *txRunner {
 	return &txRunner{db}
 }
 

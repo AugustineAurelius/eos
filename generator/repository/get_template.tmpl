@@ -41,16 +41,19 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*{{.MessageName
 	From(Table{{.MessageName}}).
 	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Dollar).MustSql()
 
-	var {{.MessageName | lower}} {{.MessageName}}
+	var {{.MessageName | lower}}Model {{.MessageName}}Model
 	err := run.QueryRow(ctx, query, args...).Scan(
 		{{- range .Fields }}
-		&{{$.MessageName | lower}}.{{.Name}},
+		&{{$.MessageName | lower}}Model.{{.Name}},
 		{{- end }}
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
 	}
 
+	{{.MessageName | lower}} := ReverseConverter({{.MessageName | lower}}Model)
+
+	
 	return &{{.MessageName | lower}}, err
 
 }
@@ -84,13 +87,17 @@ func getMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) 
 	defer rows.Close()
 
 
-	var {{.MessageName | lower}} {{.MessageName}}
+	var {{.MessageName | lower}}Model {{.MessageName}}Model
 	for rows.Next() {
-		err := rows.Scan(&{{.MessageName | lower}})
+		err := rows.Scan(
+		{{- range .Fields }}
+			&{{$.MessageName | lower}}Model.{{.Name}},
+		{{- end }}
+		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
-		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, {{.MessageName | lower}})
+		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, ReverseConverter({{.MessageName | lower}}Model))
 	}
 
 	if rows.Err() != nil {
@@ -127,7 +134,7 @@ func (r *repository) Get{{.MessageName}}(ctx context.Context,  id uuid.UUID) (*{
 
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
 func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
-	b := sq.Select(
+b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
@@ -139,20 +146,24 @@ func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageN
 
     var {{.MessageName | lower}}s []{{.MessageName}}
 
-	rows, err := r.db.Query(ctx, query, args...)
+	rows, err := run.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
 	}
 	defer rows.Close()
 
 
-	var {{.MessageName | lower}} {{.MessageName}}
+	var {{.MessageName | lower}}Model {{.MessageName}}Model
 	for rows.Next() {
-		err := rows.Scan(&{{.MessageName | lower}})
+		err := rows.Scan(
+		{{- range .Fields }}
+			&{{$.MessageName | lower}}Model.{{.Name}},
+		{{- end }}
+		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
-		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, {{.MessageName | lower}})
+		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, ReverseConverter({{.MessageName | lower}}Model))
 	}
 
 	if rows.Err() != nil {

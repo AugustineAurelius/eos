@@ -14,6 +14,30 @@ type {{.MessageName}}Model struct {
 {{- end }}
 }
 
+func (m {{.MessageName}}Model) Values() []any {
+	return []any {
+		{{- range .Fields }}
+			m.{{.Name}}, 
+		{{- end }}
+	}
+}
+
+func Converter({{.MessageName | lower}} {{.MessageName}}) {{.MessageName}}Model {
+	return {{.MessageName}}Model {
+		{{- range .Fields }}
+			{{.Name}}: {{$.MessageName | lower}}.{{.Name}}, 
+		{{- end }}
+	}
+}
+
+func ReverseConverter({{.MessageName | lower}}Model {{.MessageName}}Model) {{.MessageName}} {
+	return {{.MessageName}} {
+		{{- range .Fields }}
+			{{.Name}}: {{$.MessageName | lower}}Model.{{.Name}}, 
+		{{- end }}
+	}
+}
+
 // Table and column name constants for {{.MessageName}}
 const (
 	Table{{.MessageName}} = "{{.TableName}}"

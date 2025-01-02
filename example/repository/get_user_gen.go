@@ -33,16 +33,19 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 	From(TableUser).
 	Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Dollar).MustSql()
 
-	var user User
+	var userModel UserModel
 	err := run.QueryRow(ctx, query, args...).Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
+		&userModel.ID,
+		&userModel.Name,
+		&userModel.Email,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
 	}
 
+	user := ReverseConverter(userModel)
+
+	
 	return &user, err
 
 }
@@ -76,13 +79,17 @@ func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, err
 	defer rows.Close()
 
 
-	var user User
+	var userModel UserModel
 	for rows.Next() {
-		err := rows.Scan(&user)
+		err := rows.Scan(
+			&userModel.ID,
+			&userModel.Name,
+			&userModel.Email,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
-		users = append(users, user)
+		users = append(users, ReverseConverter(userModel))
 	}
 
 	if rows.Err() != nil {

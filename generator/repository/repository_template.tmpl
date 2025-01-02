@@ -18,13 +18,16 @@ func New(db common.Querier) *repository {
 	}
 }
 
-
 // {{.MessageName}}Filer represents the {{.MessageName}} filter.
 type {{.MessageName}}Filter struct {
 {{- range .Fields }}
   {{.Name | lower}} *{{.Type}}
   {{.Name | lower}}s []{{.Type}}
 {{- end }}
+}
+
+func NewFilter() *{{.MessageName}}Filter{
+	return &{{.MessageName}}Filter{}
 }
 
 

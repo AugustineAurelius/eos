@@ -4,6 +4,8 @@ package {{.PackageName}}
 import (
     "context"
     "database/sql"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type SqliteConnectionProvider struct {
@@ -18,18 +20,25 @@ type SqliteDB struct {
     db *sql.DB
 }
 
-func (s *SqliteDB) Connect(ctx context.Context, provider ConnectionProvider) error {
+func NewSqlite(ctx context.Context, provider ConnectionProvider) (SqliteDB, error){
     url := provider.GetConnectionURL()
     db, err := sql.Open("sqlite3", url)
     if err != nil {
-        return err
+        return SqliteDB{}, err
     }
-    s.db = db
-    return nil
+    return SqliteDB{db}, nil
 }
 
 func (s *SqliteDB) Close() error {
     return s.db.Close()
+}
+
+func NewSqliteInMemory(ctx context.Context) (SqliteDB, error){
+    db, err := sql.Open("sqlite3", ":memory:")
+    if err != nil {
+        return SqliteDB{}, err
+    }
+    return SqliteDB{db}, nil
 }
 
 func (s *SqliteDB) Query(ctx context.Context, query string, args ...any) (rows, error) {

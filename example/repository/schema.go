@@ -14,6 +14,30 @@ type UserModel struct {
 	Email string
 }
 
+func (m UserModel) Values() []any {
+	return []any {
+			m.ID,
+			m.Name,
+			m.Email,
+	}
+}
+
+func Converter(user User) UserModel {
+	return UserModel {
+			ID: user.ID,
+			Name: user.Name,
+			Email: user.Email,
+	}
+}
+
+func ReverseConverter(userModel UserModel) User {
+	return User {
+			ID: userModel.ID,
+			Name: userModel.Name,
+			Email: userModel.Email,
+	}
+}
+
 // Table and column name constants for User
 const (
 	TableUser = "users"
