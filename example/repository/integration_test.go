@@ -3,12 +3,13 @@ package repository_test
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
+	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/cassandra"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 
@@ -57,57 +58,26 @@ func Test_WithDatabases(t *testing.T) {
 			Provide: func() common.Querier {
 				ctx := context.Background()
 
-				conn, err := initConn()
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				res, err := resource.New(ctx, resource.WithAttributes(serviceName))
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer func() {
-					if err := shutdownTracerProvider(ctx); err != nil {
-						log.Fatalf("failed to shutdown TracerProvider: %s", err)
-					}
-				}()
-
-				shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
-				if err != nil {
-					log.Fatal(err)
-				}
-				defer func() {
-					if err := shutdownMeterProvider(ctx); err != nil {
-						log.Fatalf("failed to shutdown MeterProvider: %s", err)
-					}
-				}()
-
-				name := "go.opentelemetry.io/contrib/examples/otel-collector"
-				tracer := otel.Tracer(name)
-				meter := otel.Meter(name)
-
 				c, err := postgres.RunContainer(ctx,
 					testcontainers.WithImage("postgres:15.3-alpine"),
 					postgres.WithDatabase("users-db"),
 					postgres.WithUsername("postgres"),
 					postgres.WithPassword("postgres"),
+					testcontainers.WithWaitStrategy(
+						wait.ForLog("database system is ready to accept connections").
+							WithOccurrence(2).WithStartupTimeout(5*time.Second)),
 				)
 				assert.NoError(t, err)
 
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr}, logger.New(&mode{}), tracer, meter)
+				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr}, logger.New(&mode{}))
 
 				assert.NoError(t, err)
 
-				// _, err = db.Exec(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT);`)
-				// assert.NoError(t, err)
+				_, err = db.Exec(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT);`)
+				assert.NoError(t, err)
 
 				return &db
 			},
