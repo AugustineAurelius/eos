@@ -6,6 +6,7 @@ import (
 	"github.com/AugustineAurelius/eos/cmd/compose"
 	"github.com/AugustineAurelius/eos/cmd/generator"
 	"github.com/AugustineAurelius/eos/cmd/generator/builder"
+	"github.com/AugustineAurelius/eos/cmd/generator/common"
 	"github.com/AugustineAurelius/eos/cmd/generator/repository"
 	txrunner "github.com/AugustineAurelius/eos/cmd/generator/tx_runner"
 	"github.com/spf13/cobra"
@@ -52,4 +53,8 @@ func flags() {
 
 	txrunner.Cmd.Flags().StringVarP(&txrunner.CommonPath, "common_path", "c", "", "path to common")
 	txrunner.Cmd.MarkPersistentFlagRequired("common_path")
+
+	common.Cmd.Flags().BoolVarP(&common.TelemetryEnabled, "telemetry", "t", false, "add metric to common implementations")
+	common.Cmd.Flags().BoolVarP(&common.MetricsEnabled, "metrics", "m", false, "add metric to common implementations")
+
 }

@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var TelemetryEnabled, MetricsEnabled bool
+
 var Cmd = &cobra.Command{
 	Use:   "common",
 	Short: "common files",
@@ -14,6 +16,6 @@ var Cmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start to generate common files")
 
-		common.Generate()
+		common.Generate(TelemetryEnabled, MetricsEnabled)
 	},
 }

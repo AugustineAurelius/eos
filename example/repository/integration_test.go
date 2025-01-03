@@ -3,20 +3,35 @@ package repository_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
-	"time"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/cassandra"
-	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
+
+	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 
 	"github.com/AugustineAurelius/eos/example/common"
 	"github.com/AugustineAurelius/eos/example/repository"
+	"github.com/AugustineAurelius/eos/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
+
+var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
 
 func Test_WithDatabases(t *testing.T) {
 
@@ -42,25 +57,57 @@ func Test_WithDatabases(t *testing.T) {
 			Provide: func() common.Querier {
 				ctx := context.Background()
 
+				conn, err := initConn()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				res, err := resource.New(ctx, resource.WithAttributes(serviceName))
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer func() {
+					if err := shutdownTracerProvider(ctx); err != nil {
+						log.Fatalf("failed to shutdown TracerProvider: %s", err)
+					}
+				}()
+
+				shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer func() {
+					if err := shutdownMeterProvider(ctx); err != nil {
+						log.Fatalf("failed to shutdown MeterProvider: %s", err)
+					}
+				}()
+
+				name := "go.opentelemetry.io/contrib/examples/otel-collector"
+				tracer := otel.Tracer(name)
+				meter := otel.Meter(name)
+
 				c, err := postgres.RunContainer(ctx,
 					testcontainers.WithImage("postgres:15.3-alpine"),
 					postgres.WithDatabase("users-db"),
 					postgres.WithUsername("postgres"),
 					postgres.WithPassword("postgres"),
-					testcontainers.WithWaitStrategy(
-						wait.ForLog("database system is ready to accept connections").
-							WithOccurrence(2).WithStartupTimeout(5*time.Second)),
 				)
 				assert.NoError(t, err)
 
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr})
+				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr}, logger.New(&mode{}), tracer, meter)
+
 				assert.NoError(t, err)
 
-				_, err = db.Exec(ctx, `CREATE TABLE users (id UUID PRIMARY KEY,name TEXT,email TEXT);`)
-				assert.NoError(t, err)
+				// _, err = db.Exec(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT);`)
+				// assert.NoError(t, err)
 
 				return &db
 			},
@@ -112,23 +159,15 @@ func Test_WithDatabases(t *testing.T) {
 
 				host, err := clickHouseContainer.ConnectionHost(ctx)
 				assert.NoError(t, err)
-				fmt.Println(host)
 
 				db, err := common.NewClickhouse(common.ClickhouseConnectionProvider{
 					Host:      host,
-					Port:      9000,
 					User:      user,
 					Password:  password,
 					Databasse: dbname,
 				})
 				assert.NoError(t, err)
-				db.Exec(ctx, `CREATE TABLE users
-(
-    id UUID,
-    name String,
-    email String
-) ENGINE = MergeTree()
-ORDER BY id;`)
+				db.Exec(ctx, `CREATE TABLE users(id UUID, name String, email String) ENGINE = MergeTree() ORDER BY id;`)
 
 				return &db
 
@@ -138,6 +177,8 @@ ORDER BY id;`)
 
 	for _, c := range cases {
 		t.Run(c.DatabaseName, func(t *testing.T) {
+			ctx := context.Background()
+
 			db := c.Provide()
 
 			userRepo := repository.New(db)
@@ -145,18 +186,67 @@ ORDER BY id;`)
 			id := uuid.New()
 			testUser := &repository.User{ID: id, Name: "name", Email: "email"}
 
-			err := userRepo.CreateUser(context.Background(), testUser)
+			err := userRepo.CreateUser(ctx, testUser)
 			assert.NoError(t, err)
 
-			user, err := userRepo.GetUser(context.Background(), id)
+			user, err := userRepo.GetUser(ctx, id)
 			assert.NoError(t, err)
 			assert.Equal(t, testUser, user)
 
 			f := repository.NewFilter().AddOneToIDs(id)
-			users, err := userRepo.GetManyUsers(context.Background(), *f)
+			users, err := userRepo.GetManyUsers(ctx, *f)
 			assert.NoError(t, err)
 			assert.Equal(t, []repository.User{*testUser}, users)
 
 		})
 	}
+}
+
+func initConn() (*grpc.ClientConn, error) {
+	conn, err := grpc.NewClient("localhost:4317", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC connection to collector: %w", err)
+	}
+
+	return conn, err
+}
+
+func initTracerProvider(ctx context.Context, res *resource.Resource, conn *grpc.ClientConn) (func(context.Context) error, error) {
+	traceExporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithGRPCConn(conn))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
+	}
+	bsp := sdktrace.NewBatchSpanProcessor(traceExporter)
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
+		sdktrace.WithSpanProcessor(bsp),
+	)
+	otel.SetTracerProvider(tracerProvider)
+
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	return tracerProvider.Shutdown, nil
+}
+
+func initMeterProvider(ctx context.Context, res *resource.Resource, conn *grpc.ClientConn) (func(context.Context) error, error) {
+	metricExporter, err := otlpmetricgrpc.New(ctx, otlpmetricgrpc.WithGRPCConn(conn))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create metrics exporter: %w", err)
+	}
+
+	meterProvider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(metricExporter)),
+		sdkmetric.WithResource(res),
+	)
+	otel.SetMeterProvider(meterProvider)
+
+	return meterProvider.Shutdown, nil
+}
+
+type mode struct {
+}
+
+func (m *mode) IsProduction() bool {
+	return false
 }

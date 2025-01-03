@@ -16,10 +16,12 @@ import (
 var templateFS embed.FS
 
 type MessageData struct {
-	PackageName string
+	PackageName      string
+	IncludeTelemetry bool
+	IncludeMetrics   bool
 }
 
-func Generate() {
+func Generate(tel, met bool) {
 	filePath := os.Getenv("GOFILE")
 
 	fset := token.NewFileSet()
@@ -31,14 +33,18 @@ func Generate() {
 	packageName := node.Name.Name
 
 	data := MessageData{
-		PackageName: packageName,
+		PackageName:      packageName,
+		IncludeTelemetry: tel,
+		IncludeMetrics:   met,
 	}
+	fmt.Println(tel, met)
 
 	generateFile("database_gen.go", "database_template.tmpl", data)
 	generateFile("sqlite_gen.go", "sqlite_template.tmpl", data)
-	generateFile("postgres_gen.go", "postgres_template.tmpl", data)
+	// generateFile("postgres_gen.go", "postgres_template.tmpl", data)
 	generateFile("cassandra_gen.go", "cassandra_template.tmpl", data)
 	generateFile("clickhouse_gen.go", "clickhouse_template.tmpl", data)
+	generateFile("postgresv2_gen.go", "postgres_templatev2.tmpl", data)
 
 }
 
