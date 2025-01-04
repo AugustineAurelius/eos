@@ -8,6 +8,12 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"go.uber.org/zap"
+	{{if .IncludeTelemetry}}
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+    {{end}}
 )
 
 type ClickhouseConnectionProvider struct {
@@ -20,9 +26,30 @@ type ClickhouseConnectionProvider struct {
 
 type ClickHouseQuerier struct {
 	client *sql.DB
+	{{ if .IncludeLogger }}
+	logger logger
+	{{end}}
+	{{if .IncludeTelemetry}}
+	telemetry tracer
+	{{end}}
+    {{if .IncludeMetrics}}
+	queryCount      int64Counter
+	execCount       int64Counter
+	queryRowCounter int64Counter
+	{{end}}
 }
 
-func NewClickhouse(cp ClickhouseConnectionProvider) (ClickHouseQuerier, error) {
+func NewClickhouse(cp ClickhouseConnectionProvider,
+	{{if .IncludeLogger}}
+	logger logger,
+	{{end}}
+	{{if .IncludeTelemetry}}
+	telemetry tracer, 
+	{{end}}
+	{{if .IncludeMetrics}}
+	metrics metricProvider,
+	{{end}}
+) (ClickHouseQuerier, error) {
 	conn := clickhouse.OpenDB(&clickhouse.Options{
 		Addr: []string{cp.Host},
 		Auth: clickhouse.Auth{
@@ -44,27 +71,114 @@ func NewClickhouse(cp ClickhouseConnectionProvider) (ClickHouseQuerier, error) {
 	conn.SetMaxIdleConns(5)
 	conn.SetMaxOpenConns(10)
 	conn.SetConnMaxLifetime(time.Hour)
-	return ClickHouseQuerier{conn}, nil
-}
 
-func (c *ClickHouseQuerier) Query(ctx context.Context, query string, args ...any) (rows, error) {
-	rows, err := c.client.QueryContext(ctx, query, args...)
+	{{if .IncludeMetrics}}
+	queryCount, err := metrics.Int64Counter("queryCount")
 	if err != nil {
-		return nil, err
+		return ClickHouseQuerier{}, err
 	}
-	return &ClickHouseRows{rows}, nil
+	execCount, err := metrics.Int64Counter("execCount")
+	if err != nil {
+		return ClickHouseQuerier{}, err
+	}
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	if err != nil {
+		return ClickHouseQuerier{}, err 
+	}
+	{{end}}
+	return ClickHouseQuerier{client: conn,
+		{{if .IncludeLogger}}
+		logger:          logger,
+		{{end}}
+		{{if .IncludeTelemetry}}
+		telemetry:       telemetry,
+		{{end}}
+		{{if .IncludeMetrics}}
+		queryCount:      queryCount,
+		execCount:       execCount,
+		queryRowCounter: queryRowCounter,
+		{{end}}
+}, nil
 }
 
-func (c *ClickHouseQuerier) QueryRow(ctx context.Context, query string, args ...any) row {
-	row := c.client.QueryRowContext(ctx, query, args...)
+
+func (db *ClickHouseQuerier) QueryRow(ctx context.Context, query string, args ...any) row {
+	{{ if .IncludeTelemetry }}
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
+	defer span.End()
+    {{end}}
+	{{if .IncludeLogger}}
+	start := time.Now()
+	db.logger.Info("Executing QueryRow", zap.String("query", query))
+	{{end}}
+	row := db.client.QueryRowContext(ctx, query, args...)
+	{{if .IncludeLogger}}
+	duration := time.Since(start).Seconds()
+	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
+	{{end}}
+	{{if .IncludeMetrics}}
+	db.queryRowCounter.Add(ctx, 1)
+	{{end}}
 	return &ClickHouseRow{row}
 }
 
-func (c *ClickHouseQuerier) Exec(ctx context.Context, query string, args ...any) (result, error) {
-	res, err := c.client.ExecContext(ctx, query, args...)
+func (db *ClickHouseQuerier) Query(ctx context.Context, query string, args ...any) (rows, error) {
+	{{if .IncludeTelemetry}}
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
+	defer span.End()
+    {{end}}
+	{{if .IncludeLogger}}
+    start := time.Now()
+    db.logger.Info("Executing Query", zap.String("query", query))
+	{{end}}
+	rows, err := db.client.QueryContext(ctx, query, args...)
 	if err != nil {
+		{{if .IncludeTelemetry}}
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+        {{end}}
+		{{if .IncludeLogger}}
+        db.logger.Error("Query failed", zap.Error(err))
+		{{end}}
 		return nil, err
 	}
+	{{if .IncludeLogger}}
+	duration := time.Since(start).Seconds()
+    db.logger.Info("Query succeeded", zap.Float64("duration", duration))
+	{{end}}
+	{{if .IncludeMetrics}}
+	db.queryCount.Add(ctx, 1)
+    {{end}}
+	return &ClickHouseRows{rows}, nil
+}
+
+func (db *ClickHouseQuerier) Exec(ctx context.Context, query string, args ...any) (result, error) {
+	{{if .IncludeTelemetry}}
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
+    defer span.End()
+    {{end}}
+	{{if .IncludeLogger}}
+	start := time.Now()
+    db.logger.Info("Executing Exec", zap.String("query", query))
+	{{end}}
+	res, err := db.client.ExecContext(ctx, query, args...)
+	if err != nil {
+		{{if .IncludeTelemetry}}
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+        {{end}}
+		{{if .IncludeLogger}}
+        db.logger.Error("Exec failed", zap.Error(err))
+		{{end}}
+		return nil, err
+	}
+	{{if .IncludeLogger}}
+    duration := time.Since(start).Seconds()
+    db.logger.Info("Exec succeeded", zap.Float64("duration", duration))
+	{{end}}
+	{{if .IncludeMetrics}}
+	db.execCount.Add(ctx, 1)
+    {{end}}
 	return &ClickHouseResult{res}, nil
 }
 

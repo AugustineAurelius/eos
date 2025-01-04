@@ -56,5 +56,6 @@ func flags() {
 
 	common.Cmd.Flags().BoolVarP(&common.TelemetryEnabled, "telemetry", "t", false, "add metric to common implementations")
 	common.Cmd.Flags().BoolVarP(&common.MetricsEnabled, "metrics", "m", false, "add metric to common implementations")
+	common.Cmd.Flags().BoolVarP(&common.LoggerEnabled, "logger", "l", false, "add metric to common implementations")
 
 }

@@ -4,6 +4,10 @@ package {{.PackageName}}
 import (
 	"context"
 	"io"
+	
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
 // For configuration
@@ -48,4 +52,28 @@ type Tx interface {
 	Querier
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
+}
+
+
+type tracer interface {
+	trace.Tracer
+}
+
+type metricProvider interface {
+	metric.Meter
+}
+
+type int64Counter interface {
+	metric.Int64Counter
+}
+
+type logger interface {
+	Debug(msg string, fields ...zap.Field)
+	Info(msg string, fields ...zap.Field)
+	Warn(msg string, fields ...zap.Field)
+	Error(msg string, fields ...zap.Field)
+	DPanic(msg string, fields ...zap.Field)
+	Panic(msg string, fields ...zap.Field)
+	Fatal(msg string, fields ...zap.Field)
+	With(fields ...zap.Field) *zap.Logger
 }

@@ -3,6 +3,7 @@ package repository_test
 import (
 	"context"
 	"fmt"
+	"log"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 
 	"github.com/AugustineAurelius/eos/example/common"
+
 	"github.com/AugustineAurelius/eos/example/repository"
 	"github.com/AugustineAurelius/eos/pkg/logger"
 	"github.com/google/uuid"
@@ -35,6 +37,37 @@ import (
 var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
 
 func Test_WithDatabases(t *testing.T) {
+	ctx := context.Background()
+	conn, err := initConn()
+	if err != nil {
+		log.Fatal(err)
+	}
+	res, err := resource.New(ctx, resource.WithAttributes(serviceName))
+	if err != nil {
+		log.Fatal(err)
+	}
+	shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdownTracerProvider(ctx); err != nil {
+			log.Fatalf("failed to shutdown TracerProvider: %s", err)
+		}
+	}()
+	shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdownMeterProvider(ctx); err != nil {
+			log.Fatalf("failed to shutdown MeterProvider: %s", err)
+		}
+	}()
+	name := "go.opentelemetry.io/contrib/examples/otel-collector"
+	tracer := otel.Tracer(name)
+	meter := otel.Meter(name)
+	logger := logger.New(&mode{})
 
 	cases := []struct {
 		DatabaseName string
@@ -43,7 +76,7 @@ func Test_WithDatabases(t *testing.T) {
 		{
 			DatabaseName: "sqlite",
 			Provide: func() common.Querier {
-				db, err := common.NewSqliteInMemory(context.Background())
+				db, err := common.NewSqliteInMemory(context.Background(), logger, tracer, meter)
 				assert.NoError(t, err)
 
 				_, err = db.Exec(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT);`)
@@ -72,7 +105,7 @@ func Test_WithDatabases(t *testing.T) {
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr}, logger.New(&mode{}))
+				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr}, logger, tracer, meter)
 
 				assert.NoError(t, err)
 
@@ -104,7 +137,7 @@ func Test_WithDatabases(t *testing.T) {
 					User:     "user",
 					Password: "pass",
 					Keyspace: "test",
-				})
+				}, logger, tracer, meter)
 				assert.NoError(t, err)
 
 				return &db
@@ -135,7 +168,7 @@ func Test_WithDatabases(t *testing.T) {
 					User:      user,
 					Password:  password,
 					Databasse: dbname,
-				})
+				}, logger, tracer, meter)
 				assert.NoError(t, err)
 				db.Exec(ctx, `CREATE TABLE users(id UUID, name String, email String) ENGINE = MergeTree() ORDER BY id;`)
 

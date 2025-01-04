@@ -5,9 +5,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+	{{if .IncludeTelemetry}}
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+    {{end}}
 )
 
 type CassandraConnectionProvider struct {
@@ -24,9 +31,30 @@ func (cp *CassandraConnectionProvider) GetConnectionURL() string {
 
 type CassandraDatabase struct {
 	session *gocql.Session
+	{{ if .IncludeLogger }}
+	logger logger
+	{{end}}
+	{{if .IncludeTelemetry}}
+	telemetry tracer
+	{{end}}
+    {{if .IncludeMetrics}}
+	queryCount      int64Counter
+	execCount       int64Counter
+	queryRowCounter int64Counter
+	{{end}}
 }
 
-func NewCassandraDatabase(cp CassandraConnectionProvider) (CassandraDatabase, error) {
+func NewCassandraDatabase(cp CassandraConnectionProvider,
+	{{if .IncludeLogger}}
+	logger logger,
+	{{end}}
+	{{if .IncludeTelemetry}}
+	telemetry tracer, 
+	{{end}}
+	{{if .IncludeMetrics}}
+	metrics metricProvider,
+	{{end}}
+) (CassandraDatabase, error) {
 	cluster := gocql.NewCluster(cp.Hosts...)
 	cluster.RetryPolicy = &gocql.SimpleRetryPolicy{
 		NumRetries: 3,
@@ -42,8 +70,34 @@ func NewCassandraDatabase(cp CassandraConnectionProvider) (CassandraDatabase, er
 	if err != nil {
 		return CassandraDatabase{}, err
 	}
+
+	{{if .IncludeMetrics}}
+	queryCount, err := metrics.Int64Counter("queryCount")
+	if err != nil {
+		return CassandraDatabase{}, err
+	}
+	execCount, err := metrics.Int64Counter("execCount")
+	if err != nil {
+		return CassandraDatabase{}, err
+	}
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	if err != nil {
+		return CassandraDatabase{}, err
+	}	
+	{{end}}
 	return CassandraDatabase{
 		session: session,
+		{{if .IncludeLogger}}
+		logger:          logger,
+		{{end}}
+		{{if .IncludeTelemetry}}
+		telemetry:       telemetry,
+		{{end}}
+		{{if .IncludeMetrics}}
+		queryCount:      queryCount,
+		execCount:       execCount,
+		queryRowCounter: queryRowCounter,
+		{{end}}
 	}, nil
 }
 
@@ -52,22 +106,77 @@ func (db *CassandraDatabase) Close() error {
 	return nil
 }
 
-func (db *CassandraDatabase) Query(ctx context.Context, query string, args ...any) (rows, error) {
-	iter := db.session.Query(query, ConvertArgs(args...)...).WithContext(ctx).Iter()
-	return &CassandraRows{iter, iter.Scanner()}, nil
-}
-
 func (db *CassandraDatabase) QueryRow(ctx context.Context, query string, args ...any) row {
+	{{ if .IncludeTelemetry }}
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
+	defer span.End()
+    {{end}}
+	{{if .IncludeLogger}}
+	start := time.Now()
+	db.logger.Info("Executing QueryRow", zap.String("query", query))
+	{{end}}
 	r := db.session.Query(query, ConvertArgs(args...)...).
 		WithContext(context.Background())
+	{{if .IncludeLogger}}
+	duration := time.Since(start).Seconds()
+	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
+	{{end}}
+	{{if .IncludeMetrics}}
+	db.queryRowCounter.Add(ctx, 1)
+	{{end}}
 	return &CassandraRow{
 		Row: r,
 	}
 }
 
+func (db *CassandraDatabase) Query(ctx context.Context, query string, args ...any) (rows, error) {
+	{{if .IncludeTelemetry}}
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
+	defer span.End()
+    {{end}}
+	{{if .IncludeLogger}}
+    start := time.Now()
+    db.logger.Info("Executing Query", zap.String("query", query))
+	{{end}}
+	iter := db.session.Query(query, ConvertArgs(args...)...).WithContext(ctx).Iter()
+	{{if .IncludeLogger}}
+	duration := time.Since(start).Seconds()
+    db.logger.Info("Query succeeded", zap.Float64("duration", duration))
+	{{end}}
+	{{if .IncludeMetrics}}
+	db.queryCount.Add(ctx, 1)
+    {{end}}
+	return &CassandraRows{iter, iter.Scanner()}, nil
+}
+
 func (db *CassandraDatabase) Exec(ctx context.Context, query string, args ...any) (result, error) {
+	 {{if .IncludeTelemetry}}
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
+    defer span.End()
+    {{end}}
+	{{if .IncludeLogger}}
+	start := time.Now()
+    db.logger.Info("Executing Exec", zap.String("query", query))
+	{{end}}
 	err := db.session.Query(query, ConvertArgs(args...)...).
 		WithContext(context.Background()).Exec()
+    if err != nil {
+        {{if .IncludeTelemetry}}
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+        {{end}}
+		{{if .IncludeLogger}}
+        db.logger.Error("Exec failed", zap.Error(err))
+		{{end}}
+		return nil, err
+    } 
+	{{if .IncludeLogger}}
+    duration := time.Since(start).Seconds()
+    db.logger.Info("Exec succeeded", zap.Float64("duration", duration))
+	{{end}}
+	{{if .IncludeMetrics}}
+	db.execCount.Add(ctx, 1)
+    {{end}}
 	return &CassandraResult{}, err
 }
 

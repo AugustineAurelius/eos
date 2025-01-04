@@ -7,21 +7,17 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/AugustineAurelius/eos/pkg/logger"
-
-    {{if .IncludeTelemetry}}
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-    {{end}}
-    {{if .IncludeMetrics}}
-	"go.opentelemetry.io/otel/metric"
-    {{end}}
     "github.com/jackc/pgx/v5"
     "github.com/jackc/pgx/v5/pgconn"
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
+	{{if .IncludeTelemetry}}
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+    {{end}}
 )
+
 
 
 
@@ -35,28 +31,30 @@ func (p *PgxConnectionProvider) GetConnectionURL() string {
 
 type PgxPoolDB struct {
     pool     *pgxpool.Pool
-	logger *logger.Logger
-
-	{{if .IncludeTelemetry}}
-	telemetry trace.Tracer
+	{{ if .IncludeLogger }}
+	logger logger
 	{{end}}
-
+	{{if .IncludeTelemetry}}
+	telemetry tracer
+	{{end}}
     {{if .IncludeMetrics}}
-	queryCount      metric.Int64Counter
-	execCount       metric.Int64Counter
-	queryRowCounter metric.Int64Counter
+	queryCount      int64Counter
+	execCount       int64Counter
+	queryRowCounter int64Counter
 	{{end}}
 }
 
-func NewPostgres(ctx context.Context, provider PgxConnectionProvider, logger *logger.Logger, 
+func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
+	{{if .IncludeLogger}}
+	logger logger,
+	{{end}}
 	{{if .IncludeTelemetry}}
-	telemetry trace.Tracer, 
+	telemetry tracer, 
 	{{end}}
 	{{if .IncludeMetrics}}
-	metrics metric.Meter,
+	metrics metricProvider,
 	{{end}}
 ) (PgxPoolDB, error) {
-
 	url := provider.GetConnectionURL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
@@ -64,17 +62,22 @@ func NewPostgres(ctx context.Context, provider PgxConnectionProvider, logger *lo
 	}
 	{{if .IncludeMetrics}}
 	queryCount, err := metrics.Int64Counter("queryCount")
+	if err != nil {
+		return PgxPoolDB{}, err
+	}
 	execCount, err := metrics.Int64Counter("execCount")
+	if err != nil {
+		return PgxPoolDB{}, err
+	}
 	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
-	{{end}}
-
-
-	{{if .IncludeTelemetry}}
-	{{end}}
-	{{if .IncludeMetrics}}
+	if err != nil {
+		return PgxPoolDB{}, err
+	}
 	{{end}}
 	return PgxPoolDB{pool: pool,
+		{{if .IncludeLogger}}
 		logger:          logger,
+		{{end}}
 		{{if .IncludeTelemetry}}
 		telemetry:       telemetry,
 		{{end}}
@@ -87,113 +90,129 @@ func NewPostgres(ctx context.Context, provider PgxConnectionProvider, logger *lo
 	}, nil
 }
 
-func (p *PgxPoolDB) Close() error {
-	p.pool.Close()
+func (db *PgxPoolDB) Close() error {
+	db.pool.Close()
 	return nil
 }
 
-func (p *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) row {
-	{{if .IncludeTelemetry}}
-	ctx, span := p.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query)))
+
+func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) row{
+	{{ if .IncludeTelemetry }}
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
 	defer span.End()
     {{end}}
-
+	{{if .IncludeLogger}}
 	start := time.Now()
-	p.logger.Info("Executing QueryRow", zap.String("query", query))
-	row := p.pool.QueryRow(ctx, ReplaceQuestions(query), args...)
+	db.logger.Info("Executing QueryRow", zap.String("query", query))
+	{{end}}
+	row := db.pool.QueryRow(ctx, ReplaceQuestions(query), args...)
+	{{if .IncludeLogger}}
 	duration := time.Since(start).Seconds()
-
+	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
+	{{end}}
 	{{if .IncludeMetrics}}
-	p.queryRowCounter.Add(ctx, 1)
+	db.queryRowCounter.Add(ctx, 1)
 	{{end}}
 
-	p.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
-
-	return row
+	return &PgxRow{row}
 }
 
-func (p *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
-	 {{if .IncludeTelemetry}}
-	ctx, span := p.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query)))
+func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+	{{if .IncludeTelemetry}}
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
 	defer span.End()
     {{end}}
-
+	{{if .IncludeLogger}}
     start := time.Now()
-    p.logger.Info("Executing Query", zap.String("query", query))
-
-	rows, err := p.pool.Query(ctx, ReplaceQuestions(query), args...)
-	duration := time.Since(start).Seconds()
-
+    db.logger.Info("Executing Query", zap.String("query", query))
+	{{end}}
+	rows, err := db.pool.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		{{if .IncludeTelemetry}}
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
         {{end}}
-        p.logger.Error("Query failed", zap.Error(err))
+		{{if .IncludeLogger}}
+        db.logger.Error("Query failed", zap.Error(err))
+		{{end}}
 		return nil, err
 	}
+	{{if .IncludeLogger}}
+	duration := time.Since(start).Seconds()
+    db.logger.Info("Query succeeded", zap.Float64("duration", duration))
+	{{end}}
 	{{if .IncludeMetrics}}
-	p.queryCount.Add(ctx, 1)
+	db.queryCount.Add(ctx, 1)
     {{end}}
-    p.logger.Info("Query succeeded", zap.Float64("duration", duration))
-
 	return &PgxRows{rows}, nil
 }
 
-func (p *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (db *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
     {{if .IncludeTelemetry}}
-    ctx, span := p.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query)))
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
     defer span.End()
     {{end}}
-
-    start := time.Now()
-    p.logger.Info("Executing Exec", zap.String("query", query))
-    r, err := p.pool.Exec(ctx, ReplaceQuestions(query), args...)
-    duration := time.Since(start).Seconds()
-
+	{{if .IncludeLogger}}
+	start := time.Now()
+    db.logger.Info("Executing Exec", zap.String("query", query))
+	{{end}}
+    r, err := db.pool.Exec(ctx, ReplaceQuestions(query), args...)
     if err != nil {
         {{if .IncludeTelemetry}}
 		span.SetStatus(codes.Error, err.Error())
 		span.RecordError(err)
         {{end}}
-        p.logger.Error("Exec failed", zap.Error(err))
+		{{if .IncludeLogger}}
+        db.logger.Error("Exec failed", zap.Error(err))
+		{{end}}
 		return nil, err
     } 
+	{{if .IncludeLogger}}
+    duration := time.Since(start).Seconds()
+    db.logger.Info("Exec succeeded", zap.Float64("duration", duration))
+	{{end}}
 	{{if .IncludeMetrics}}
-	p.execCount.Add(ctx, 1)
+	db.execCount.Add(ctx, 1)
     {{end}}
-    p.logger.Info("Exec succeeded", zap.Float64("duration", duration))
-
     return &PgxResult{r}, err
 }
 
-func (p *PgxPoolDB) BeginTransaction(ctx context.Context) (Tx, error) {
-	tx, err := p.pool.Begin(ctx)
+func (db *PgxPoolDB) BeginTransaction(ctx context.Context) (Tx, error) {
+	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	return &PgxTx{tx}, nil
 }
 
+type PgxRow struct {
+	pgx.Row
+}
+
+func (db *PgxRow) Scan(dest ...any) error {
+	return db.Row.Scan(dest...)
+}
+
+
 type PgxRows struct {
 	pgx.Rows
 }
 
-func (p *PgxRows) Next() bool {
-	return p.Rows.Next()
+func (db *PgxRows) Next() bool {
+	return db.Rows.Next()
 }
 
-func (p *PgxRows) Scan(dest ...any) error {
-	return p.Rows.Scan(dest...)
+func (db *PgxRows) Scan(dest ...any) error {
+	return db.Rows.Scan(dest...)
 }
 
-func (p *PgxRows) Close() error {
-	p.Rows.Close()
+func (db *PgxRows) Close() error {
+	db.Rows.Close()
 	return nil
 }
 
-func (p *PgxRows) Err() error {
-	return p.Rows.Err()
+func (db *PgxRows) Err() error {
+	return db.Rows.Err()
 }
 
 type PgxTx struct {
@@ -209,7 +228,7 @@ func (p *PgxTx) Query(ctx context.Context, query string, args ...any) (rows, err
 }
 
 func (p *PgxTx) QueryRow(ctx context.Context, query string, args ...any) row {
-	return p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)
+	return &PgxRow{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
 }
 
 func (p *PgxTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
