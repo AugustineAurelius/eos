@@ -19,18 +19,8 @@ jobs:
     - name: Fix Docker permissions
       run: sudo chmod 666 /var/run/docker.sock
     
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Docker
-      uses: actions/setup-docker@v3
-      with:
-        docker-version: 20.10.14
-
-    - name: Install Docker Compose
-      run: |
-        sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-        sudo chmod +x /usr/local/bin/docker-compose
+    - name: Run compose up for test Docker
+      run: docker-compose -f ./example/repository/docker-compose.yaml up -d --build
 
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -42,23 +32,12 @@ jobs:
 
     - name: Build
       run: go build -v ./...
-    
-    - name: Run Docker Compose
-      working-directory: ./example/repository
-      run: docker compose up -d
-
-    - name: Wait for services to be ready
-      run: |
-          # Add commands to wait for services to start if necessary
-          sleep 5
 
     - name: Test
       env:
         DOCKER_HOST: unix:///var/run/docker.sock
       run: go test -v ./...
 
-
     - name: Stop Docker Compose services
-      working-directory: ./example/repository
-      run: docker compose down
+      run: docker-compose -f ./example/repository/docker-compose.yaml down
       if: always()
