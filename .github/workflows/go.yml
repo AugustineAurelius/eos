@@ -18,6 +18,15 @@ jobs:
     
     - name: Fix Docker permissions
       run: sudo chmod 666 /var/run/docker.sock
+    
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker
+      uses: docker/setup-docker@v3
+
+    - name: Set up Docker Compose
+      uses: docker/setup-compose@v3
 
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -29,8 +38,23 @@ jobs:
 
     - name: Build
       run: go build -v ./...
+    
+    - name: Run Docker Compose
+      working-directory: ./example/repository
+      run: docker compose up -d
+
+    - name: Wait for services to be ready
+      run: |
+          # Add commands to wait for services to start if necessary
+          sleep 5
 
     - name: Test
       env:
         DOCKER_HOST: unix:///var/run/docker.sock
       run: go test -v ./...
+
+
+    - name: Stop Docker Compose services
+      working-directory: ./example/repository
+      run: docker compose down
+      if: always()
