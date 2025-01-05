@@ -24,15 +24,15 @@ import (
 
 
 
-type PgxConnectionProvider struct {
+type PostgresConnectionProvider struct {
 	URL string
 }
 
-func (p *PgxConnectionProvider) GetConnectionURL() string {
+func (p *PostgresConnectionProvider) GetConnectionURL() string {
 	return p.URL
 }
 
-type PgxPoolDB struct {
+type PostgresDB struct {
     pool     *pgxpool.Pool
 	
 	logger logger
@@ -47,7 +47,7 @@ type PgxPoolDB struct {
 	
 }
 
-func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
+func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
 	
 	logger logger,
 	
@@ -57,27 +57,27 @@ func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
 	
 	metrics metricProvider,
 	
-) (PgxPoolDB, error) {
+) (PostgresDB, error) {
 	url := provider.GetConnectionURL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
-		return PgxPoolDB{}, err
+		return PostgresDB{}, err
 	}
 	
 	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("Postgres"))
 	if err != nil {
-		return PgxPoolDB{}, err
+		return PostgresDB{}, err
 	}
 	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("Postgres"))
 	if err != nil {
-		return PgxPoolDB{}, err
+		return PostgresDB{}, err
 	}
 	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("Postgres"))
 	if err != nil {
-		return PgxPoolDB{}, err
+		return PostgresDB{}, err
 	}
 	
-	return PgxPoolDB{pool: pool,
+	return PostgresDB{pool: pool,
 		
 		logger:          logger,
 		
@@ -93,13 +93,13 @@ func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
 	}, nil
 }
 
-func (db *PgxPoolDB) Close() error {
+func (db *PostgresDB) Close() error {
 	db.pool.Close()
 	return nil
 }
 
 
-func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) row{
+func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) row{
 	
 	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
 	defer span.End()
@@ -117,10 +117,10 @@ func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) ro
 	db.queryRowCounter.Add(ctx, 1)
 	
 
-	return &PgxRow{row}
+	return &PostgresRow{row}
 }
 
-func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	
 	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
 	defer span.End()
@@ -147,10 +147,10 @@ func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows
 	
 	db.queryCount.Add(ctx, 1)
     
-	return &PgxRows{rows}, nil
+	return &PostgresRows{rows}, nil
 }
 
-func (db *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (db *PostgresDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
     
     ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
     defer span.End()
@@ -177,81 +177,81 @@ func (db *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (resul
 	
 	db.execCount.Add(ctx, 1)
     
-    return &PgxResult{r}, err
+    return &PostgresResult{r}, err
 }
 
-func (db *PgxPoolDB) BeginTransaction(ctx context.Context) (Tx, error) {
+func (db *PostgresDB) BeginTransaction(ctx context.Context) (Tx, error) {
 	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &PgxTx{tx}, nil
+	return &PostgresTx{tx}, nil
 }
 
-type PgxRow struct {
+type PostgresRow struct {
 	pgx.Row
 }
 
-func (db *PgxRow) Scan(dest ...any) error {
+func (db *PostgresRow) Scan(dest ...any) error {
 	return db.Row.Scan(dest...)
 }
 
 
-type PgxRows struct {
+type PostgresRows struct {
 	pgx.Rows
 }
 
-func (db *PgxRows) Next() bool {
+func (db *PostgresRows) Next() bool {
 	return db.Rows.Next()
 }
 
-func (db *PgxRows) Scan(dest ...any) error {
+func (db *PostgresRows) Scan(dest ...any) error {
 	return db.Rows.Scan(dest...)
 }
 
-func (db *PgxRows) Close() error {
+func (db *PostgresRows) Close() error {
 	db.Rows.Close()
 	return nil
 }
 
-func (db *PgxRows) Err() error {
+func (db *PostgresRows) Err() error {
 	return db.Rows.Err()
 }
 
-type PgxTx struct {
+type PostgresTx struct {
 	pgx.Tx
 }
 
-func (p *PgxTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (p *PostgresTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	rows, err := p.Tx.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		return nil, err
 	}
-	return &PgxRows{rows}, nil
+	return &PostgresRows{rows}, nil
 }
 
-func (p *PgxTx) QueryRow(ctx context.Context, query string, args ...any) row {
-	return &PgxRow{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
+func (p *PostgresTx) QueryRow(ctx context.Context, query string, args ...any) row {
+	return &PostgresRow{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
 }
 
-func (p *PgxTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (p *PostgresTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	r, err := p.Tx.Exec(ctx, ReplaceQuestions(query), args...)
-	return &PgxResult{r}, err
+	return &PostgresResult{r}, err
 }
 
-func (p *PgxTx) Commit(ctx context.Context) error {
+func (p *PostgresTx) Commit(ctx context.Context) error {
 	return p.Tx.Commit(ctx)
 }
 
-func (p *PgxTx) Rollback(ctx context.Context) error {
+func (p *PostgresTx) Rollback(ctx context.Context) error {
 	return p.Tx.Rollback(ctx)
 }
 
-type PgxResult struct {
+type PostgresResult struct {
 	pgconn.CommandTag
 }
 
-func (r *PgxResult) RowsAffected() (int64, error) {
+func (r *PostgresResult) RowsAffected() (int64, error) {
 	return r.CommandTag.RowsAffected(), nil
 }
 

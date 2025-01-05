@@ -24,15 +24,15 @@ import (
 
 
 
-type PgxConnectionProvider struct {
+type {{.DatabaseName}}ConnectionProvider struct {
 	URL string
 }
 
-func (p *PgxConnectionProvider) GetConnectionURL() string {
+func (p *{{.DatabaseName}}ConnectionProvider) GetConnectionURL() string {
 	return p.URL
 }
 
-type PgxPoolDB struct {
+type {{.DatabaseName}}DB struct {
     pool     *pgxpool.Pool
 	{{ if .IncludeLogger }}
 	logger logger
@@ -47,7 +47,7 @@ type PgxPoolDB struct {
 	{{end}}
 }
 
-func New{{.DatabaseName}}(ctx context.Context, provider PgxConnectionProvider,
+func New{{.DatabaseName}}(ctx context.Context, provider {{.DatabaseName}}ConnectionProvider,
 	{{if .IncludeLogger}}
 	logger logger,
 	{{end}}
@@ -57,27 +57,27 @@ func New{{.DatabaseName}}(ctx context.Context, provider PgxConnectionProvider,
 	{{if .IncludeMetrics}}
 	metrics metricProvider,
 	{{end}}
-) (PgxPoolDB, error) {
+) ({{.DatabaseName}}DB, error) {
 	url := provider.GetConnectionURL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
-		return PgxPoolDB{}, err
+		return {{.DatabaseName}}DB{}, err
 	}
 	{{if .IncludeMetrics}}
 	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return PgxPoolDB{}, err
+		return {{.DatabaseName}}DB{}, err
 	}
 	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return PgxPoolDB{}, err
+		return {{.DatabaseName}}DB{}, err
 	}
 	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return PgxPoolDB{}, err
+		return {{.DatabaseName}}DB{}, err
 	}
 	{{end}}
-	return PgxPoolDB{pool: pool,
+	return {{.DatabaseName}}DB{pool: pool,
 		{{if .IncludeLogger}}
 		logger:          logger,
 		{{end}}
@@ -93,13 +93,13 @@ func New{{.DatabaseName}}(ctx context.Context, provider PgxConnectionProvider,
 	}, nil
 }
 
-func (db *PgxPoolDB) Close() error {
+func (db *{{.DatabaseName}}DB) Close() error {
 	db.pool.Close()
 	return nil
 }
 
 
-func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) row{
+func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args ...any) row{
 	{{ if .IncludeTelemetry }}
 	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -117,10 +117,10 @@ func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) ro
 	db.queryRowCounter.Add(ctx, 1)
 	{{end}}
 
-	return &PgxRow{row}
+	return &{{.DatabaseName}}Row{row}
 }
 
-func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *{{.DatabaseName}}DB) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	{{if .IncludeTelemetry}}
 	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -147,10 +147,10 @@ func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows
 	{{if .IncludeMetrics}}
 	db.queryCount.Add(ctx, 1)
     {{end}}
-	return &PgxRows{rows}, nil
+	return &{{.DatabaseName}}Rows{rows}, nil
 }
 
-func (db *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (db *{{.DatabaseName}}DB) Exec(ctx context.Context, query string, args ...any) (result, error) {
     {{if .IncludeTelemetry}}
     ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
     defer span.End()
@@ -177,81 +177,81 @@ func (db *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (resul
 	{{if .IncludeMetrics}}
 	db.execCount.Add(ctx, 1)
     {{end}}
-    return &PgxResult{r}, err
+    return &{{.DatabaseName}}Result{r}, err
 }
 
-func (db *PgxPoolDB) BeginTransaction(ctx context.Context) (Tx, error) {
+func (db *{{.DatabaseName}}DB) BeginTransaction(ctx context.Context) (Tx, error) {
 	tx, err := db.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &PgxTx{tx}, nil
+	return &{{.DatabaseName}}Tx{tx}, nil
 }
 
-type PgxRow struct {
+type {{.DatabaseName}}Row struct {
 	pgx.Row
 }
 
-func (db *PgxRow) Scan(dest ...any) error {
+func (db *{{.DatabaseName}}Row) Scan(dest ...any) error {
 	return db.Row.Scan(dest...)
 }
 
 
-type PgxRows struct {
+type {{.DatabaseName}}Rows struct {
 	pgx.Rows
 }
 
-func (db *PgxRows) Next() bool {
+func (db *{{.DatabaseName}}Rows) Next() bool {
 	return db.Rows.Next()
 }
 
-func (db *PgxRows) Scan(dest ...any) error {
+func (db *{{.DatabaseName}}Rows) Scan(dest ...any) error {
 	return db.Rows.Scan(dest...)
 }
 
-func (db *PgxRows) Close() error {
+func (db *{{.DatabaseName}}Rows) Close() error {
 	db.Rows.Close()
 	return nil
 }
 
-func (db *PgxRows) Err() error {
+func (db *{{.DatabaseName}}Rows) Err() error {
 	return db.Rows.Err()
 }
 
-type PgxTx struct {
+type {{.DatabaseName}}Tx struct {
 	pgx.Tx
 }
 
-func (p *PgxTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (p *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	rows, err := p.Tx.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		return nil, err
 	}
-	return &PgxRows{rows}, nil
+	return &{{.DatabaseName}}Rows{rows}, nil
 }
 
-func (p *PgxTx) QueryRow(ctx context.Context, query string, args ...any) row {
-	return &PgxRow{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
+func (p *{{.DatabaseName}}Tx) QueryRow(ctx context.Context, query string, args ...any) row {
+	return &{{.DatabaseName}}Row{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
 }
 
-func (p *PgxTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (p *{{.DatabaseName}}Tx) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	r, err := p.Tx.Exec(ctx, ReplaceQuestions(query), args...)
-	return &PgxResult{r}, err
+	return &{{.DatabaseName}}Result{r}, err
 }
 
-func (p *PgxTx) Commit(ctx context.Context) error {
+func (p *{{.DatabaseName}}Tx) Commit(ctx context.Context) error {
 	return p.Tx.Commit(ctx)
 }
 
-func (p *PgxTx) Rollback(ctx context.Context) error {
+func (p *{{.DatabaseName}}Tx) Rollback(ctx context.Context) error {
 	return p.Tx.Rollback(ctx)
 }
 
-type PgxResult struct {
+type {{.DatabaseName}}Result struct {
 	pgconn.CommandTag
 }
 
-func (r *PgxResult) RowsAffected() (int64, error) {
+func (r *{{.DatabaseName}}Result) RowsAffected() (int64, error) {
 	return r.CommandTag.RowsAffected(), nil
 }
 

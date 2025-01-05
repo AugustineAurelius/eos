@@ -69,7 +69,7 @@ func Test_WithDatabases(t *testing.T) {
 		{
 			DatabaseName: "sqlite",
 			Provide: func() common.Querier {
-				db, err := common.NewSqliteInMemory(context.Background(), logger, tracer, meter)
+				db, err := common.NewSQLiteInMemory(context.Background(), logger, tracer, meter)
 				assert.NoError(t, err)
 
 				_, err = db.Exec(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT);`)
@@ -98,7 +98,7 @@ func Test_WithDatabases(t *testing.T) {
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, common.PgxConnectionProvider{connStr}, logger, tracer, meter)
+				db, err := common.NewPostgres(ctx, common.PostgresConnectionProvider{connStr}, logger, tracer, meter)
 
 				assert.NoError(t, err)
 

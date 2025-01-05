@@ -27,7 +27,7 @@ type {{.DatabaseName}}ConnectionProvider struct {
 	Password  string
 }
 
-type ClickHouseQuerier struct {
+type {{.DatabaseName}}Querier struct {
 	client *sql.DB
 	{{ if .IncludeLogger }}
 	logger logger
@@ -52,7 +52,7 @@ func New{{.DatabaseName}}(cp ClickhouseConnectionProvider,
 	{{if .IncludeMetrics}}
 	metrics metricProvider,
 	{{end}}
-) (ClickHouseQuerier, error) {
+) ({{.DatabaseName}}Querier, error) {
 	conn := clickhouse.OpenDB(&clickhouse.Options{
 		Addr: []string{cp.Host},
 		Auth: clickhouse.Auth{
@@ -78,18 +78,18 @@ func New{{.DatabaseName}}(cp ClickhouseConnectionProvider,
 	{{if .IncludeMetrics}}
 	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return ClickHouseQuerier{}, err
+		return {{.DatabaseName}}Querier{}, err
 	}
 	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return ClickHouseQuerier{}, err
+		return {{.DatabaseName}}Querier{}, err
 	}
 	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return ClickHouseQuerier{}, err 
+		return {{.DatabaseName}}Querier{}, err 
 	}
 	{{end}}
-	return ClickHouseQuerier{client: conn,
+	return {{.DatabaseName}}Querier{client: conn,
 		{{if .IncludeLogger}}
 		logger:          logger,
 		{{end}}
@@ -105,7 +105,7 @@ func New{{.DatabaseName}}(cp ClickhouseConnectionProvider,
 }
 
 
-func (db *ClickHouseQuerier) QueryRow(ctx context.Context, query string, args ...any) row {
+func (db *{{.DatabaseName}}Querier) QueryRow(ctx context.Context, query string, args ...any) row {
 	{{ if .IncludeTelemetry }}
 	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -122,10 +122,10 @@ func (db *ClickHouseQuerier) QueryRow(ctx context.Context, query string, args ..
 	{{if .IncludeMetrics}}
 	db.queryRowCounter.Add(ctx, 1)
 	{{end}}
-	return &ClickHouseRow{row}
+	return &{{.DatabaseName}}Row{row}
 }
 
-func (db *ClickHouseQuerier) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *{{.DatabaseName}}Querier) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	{{if .IncludeTelemetry}}
 	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -152,10 +152,10 @@ func (db *ClickHouseQuerier) Query(ctx context.Context, query string, args ...an
 	{{if .IncludeMetrics}}
 	db.queryCount.Add(ctx, 1)
     {{end}}
-	return &ClickHouseRows{rows}, nil
+	return &{{.DatabaseName}}Rows{rows}, nil
 }
 
-func (db *ClickHouseQuerier) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (db *{{.DatabaseName}}Querier) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	{{if .IncludeTelemetry}}
     ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
     defer span.End()
@@ -182,63 +182,63 @@ func (db *ClickHouseQuerier) Exec(ctx context.Context, query string, args ...any
 	{{if .IncludeMetrics}}
 	db.execCount.Add(ctx, 1)
     {{end}}
-	return &ClickHouseResult{res}, nil
+	return &{{.DatabaseName}}Result{res}, nil
 }
 
-type ClickHouseRows struct {
+type {{.DatabaseName}}Rows struct {
 	rows
 }
 
-func (r *ClickHouseRows) Err() error {
+func (r *{{.DatabaseName}}Rows) Err() error {
 	return r.rows.Err()
 }
 
-func (r *ClickHouseRows) Next() bool {
+func (r *{{.DatabaseName}}Rows) Next() bool {
 	return r.rows.Next()
 }
 
-func (r *ClickHouseRows) Close() error {
+func (r *{{.DatabaseName}}Rows) Close() error {
 	return r.rows.Close()
 }
 
-func (r *ClickHouseRows) Scan(dest ...any) error {
+func (r *{{.DatabaseName}}Rows) Scan(dest ...any) error {
 	return r.rows.Scan(dest...)
 }
 
-type ClickHouseRow struct {
+type {{.DatabaseName}}Row struct {
 	row
 }
 
-func (r *ClickHouseRow) Scan(dest ...any) error {
+func (r *{{.DatabaseName}}Row) Scan(dest ...any) error {
 	return r.row.Scan(dest...)
 }
 
-type ClickHouseResult struct {
+type {{.DatabaseName}}Result struct {
 	result
 }
 
-func (r *ClickHouseResult) RowsAffected() (int64, error) {
+func (r *{{.DatabaseName}}Result) RowsAffected() (int64, error) {
 	return r.result.RowsAffected()
 }
 
-type ClickHouseBegginer struct {
-	*ClickHouseQuerier
+type {{.DatabaseName}}Begginer struct {
+	*{{.DatabaseName}}Querier
 }
 
-func (b *ClickHouseBegginer) Begin(ctx context.Context) (Tx, error) {
-	return &ClickHouseTx{}, errors.New("not supported")
+func (b *{{.DatabaseName}}Begginer) Begin(ctx context.Context) (Tx, error) {
+	return &{{.DatabaseName}}Tx{}, errors.New("not supported")
 }
 
-type ClickHouseTx struct {
-	*ClickHouseQuerier
+type {{.DatabaseName}}Tx struct {
+	*{{.DatabaseName}}Querier
 }
 
-func (t *ClickHouseTx) Commit(ctx context.Context) error {
+func (t *{{.DatabaseName}}Tx) Commit(ctx context.Context) error {
 	return errors.New("not supported")
 
 }
 
-func (t *ClickHouseTx) Rollback(ctx context.Context) error {
+func (t *{{.DatabaseName}}Tx) Rollback(ctx context.Context) error {
 	return errors.New("not supported")
 }
 

@@ -18,15 +18,15 @@ import (
     
 )
 
-type SqliteConnectionProvider struct {
+type SQLiteConnectionProvider struct {
     URL string
 }
 
-func (s *SqliteConnectionProvider) GetConnectionURL() string {
+func (s *SQLiteConnectionProvider) GetConnectionURL() string {
     return s.URL
 }
 
-type SqliteDB struct {
+type SQLiteDB struct {
     db *sql.DB
 	
 	logger logger
@@ -41,7 +41,7 @@ type SqliteDB struct {
 	
 }
 
-func NewSqlite(ctx context.Context, provider SqliteConnectionProvider,
+func NewSQLite(ctx context.Context, provider SQLiteConnectionProvider,
 	
 	logger logger,
 	
@@ -51,27 +51,27 @@ func NewSqlite(ctx context.Context, provider SqliteConnectionProvider,
 	
 	metrics metricProvider,
 	
-) (SqliteDB, error){
+) (SQLiteDB, error){
     url := provider.GetConnectionURL()
     db, err := sql.Open("sqlite3", url)
     if err != nil {
-        return SqliteDB{}, err
+        return SQLiteDB{}, err
     }
 	
 	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("SQLite"))
 	if err != nil {
-		return SqliteDB{}, err
+		return SQLiteDB{}, err
 	}
 	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("SQLite"))
 	if err != nil {
-		return SqliteDB{}, err
+		return SQLiteDB{}, err
 	}
 	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("SQLite"))
 	if err != nil {
-		return SqliteDB{}, err 
+		return SQLiteDB{}, err 
 	}
 	
-    return SqliteDB{db: db,
+    return SQLiteDB{db: db,
 		
 		logger:          logger,
 		
@@ -86,11 +86,11 @@ func NewSqlite(ctx context.Context, provider SqliteConnectionProvider,
 	}, nil
 }
 
-func (s *SqliteDB) Close() error {
+func (s *SQLiteDB) Close() error {
     return s.db.Close()
 }
 
-func NewSqliteInMemory(ctx context.Context,
+func NewSQLiteInMemory(ctx context.Context,
 	
 	logger logger,
 	
@@ -100,26 +100,26 @@ func NewSqliteInMemory(ctx context.Context,
 	
 	metrics metricProvider,
 	
-) (SqliteDB, error){
+) (SQLiteDB, error){
     db, err := sql.Open("sqlite3", ":memory:")
     if err != nil {
-        return SqliteDB{}, err
+        return SQLiteDB{}, err
     }
 	
 	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("SQLite"))
 	if err != nil {
-		return SqliteDB{}, err
+		return SQLiteDB{}, err
 	}
 	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("SQLite"))
 	if err != nil {
-		return SqliteDB{}, err
+		return SQLiteDB{}, err
 	}
 	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("SQLite"))
 	if err != nil {
-		return SqliteDB{}, err 
+		return SQLiteDB{}, err 
 	}
 	
-    return SqliteDB{db: db,
+    return SQLiteDB{db: db,
 		
 		logger:          logger,
 		
@@ -134,7 +134,7 @@ func NewSqliteInMemory(ctx context.Context,
 }, nil
 }
 
-func (db *SqliteDB) QueryRow(ctx context.Context, query string, args ...any) row {
+func (db *SQLiteDB) QueryRow(ctx context.Context, query string, args ...any) row {
 	
 	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "SQLite")))
 	defer span.End()
@@ -154,7 +154,7 @@ func (db *SqliteDB) QueryRow(ctx context.Context, query string, args ...any) row
     return row
 }
 
-func (db *SqliteDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *SQLiteDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	
 	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "SQLite")))
 	defer span.End()
@@ -181,10 +181,10 @@ func (db *SqliteDB) Query(ctx context.Context, query string, args ...any) (rows,
 	
 	db.queryCount.Add(ctx, 1)
     
-    return &SqliteRows{rows}, nil
+    return &SQLiteRows{rows}, nil
 }
 
-func (db *SqliteDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (db *SQLiteDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	
     ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "SQLite")))
     defer span.End()
@@ -214,58 +214,58 @@ func (db *SqliteDB) Exec(ctx context.Context, query string, args ...any) (result
     return r, err
 }
 
-func (s *SqliteDB) BeginTransaction(ctx context.Context) (Tx, error) {
+func (s *SQLiteDB) BeginTransaction(ctx context.Context) (Tx, error) {
     tx, err := s.db.BeginTx(ctx, &sql.TxOptions{})
     if err != nil {
         return nil, err
     }
-    return &SqliteTx{tx}, nil
+    return &SQLiteTx{tx}, nil
 }
 
-type SqliteRows struct {
+type SQLiteRows struct {
     *sql.Rows
 }
 
-func (s *SqliteRows) Next() bool {
+func (s *SQLiteRows) Next() bool {
     return s.Rows.Next()
 }
 
-func (s *SqliteRows) Scan(dest ...any) error {
+func (s *SQLiteRows) Scan(dest ...any) error {
     return s.Rows.Scan(dest...)
 }
 
-func (s *SqliteRows) Close() error {
+func (s *SQLiteRows) Close() error {
     return s.Rows.Close()
 }
 
-func (s *SqliteRows) Err() error {
+func (s *SQLiteRows) Err() error {
     return s.Rows.Err()
 }
 
-type SqliteTx struct {
+type SQLiteTx struct {
 	*sql.Tx
 }
 
-func (s *SqliteTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (s *SQLiteTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	rows, err := s.Tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	return &SqliteRows{rows}, nil
+	return &SQLiteRows{rows}, nil
 }
 
-func (s *SqliteTx) QueryRow(ctx context.Context, query string, args ...any) row {
+func (s *SQLiteTx) QueryRow(ctx context.Context, query string, args ...any) row {
 	return s.Tx.QueryRowContext(ctx, query, args...)
 }
 
-func (s *SqliteTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (s *SQLiteTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	return s.Tx.ExecContext(ctx, query, args...)
 }
 
-func (s *SqliteTx) Commit(ctx context.Context) error {
+func (s *SQLiteTx) Commit(ctx context.Context) error {
 	return s.Tx.Commit()
 }
 
-func (s *SqliteTx) Rollback(ctx context.Context) error {
+func (s *SQLiteTx) Rollback(ctx context.Context) error {
 	return s.Tx.Rollback()
 }
