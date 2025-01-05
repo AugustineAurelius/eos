@@ -20,6 +20,7 @@ type MessageData struct {
 	IncludeTelemetry bool
 	IncludeMetrics   bool
 	IncludeLogger    bool
+	DatabaseName     string
 }
 
 func Generate(log, tel, met bool) {
@@ -41,15 +42,16 @@ func Generate(log, tel, met bool) {
 	}
 
 	generateFile("database_gen.go", "database_template.tmpl", data)
-	generateDir("sqlite.go", "sqlite_template.tmpl", data)
+	generateDatabase("SQLite", "sqlite.go", "sqlite_template.tmpl", data)
 	// generateFile("postgres_gen.go", "postgres_template.tmpl", data)
-	generateDir("cassandra.go", "cassandra_template.tmpl", data)
-	generateDir("clickhouse.go", "clickhouse_template.tmpl", data)
-	generateDir("postgresv2.go", "postgres_templatev2.tmpl", data)
+	generateDatabase("Cassandra", "cassandra.go", "cassandra_template.tmpl", data)
+	generateDatabase("Clickhouse", "clickhouse.go", "clickhouse_template.tmpl", data)
+	generateDatabase("Postgres", "postgresv2.go", "postgres_templatev2.tmpl", data)
 
 }
 
-func generateDir(fileName, tmplPath string, data MessageData) {
+func generateDatabase(dbName, fileName, tmplPath string, data MessageData) {
+	data.DatabaseName = dbName
 
 	tmplContent, err := templateFS.ReadFile(tmplPath)
 	if err != nil {

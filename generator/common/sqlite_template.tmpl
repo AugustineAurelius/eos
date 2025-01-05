@@ -8,6 +8,9 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"go.uber.org/zap"
+	{{if .IncludeMetrics}}
+	"go.opentelemetry.io/otel/metric"
+	{{end}}
 	{{if .IncludeTelemetry}}
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -55,15 +58,15 @@ func NewSqlite(ctx context.Context, provider SqliteConnectionProvider,
         return SqliteDB{}, err
     }
 	{{if .IncludeMetrics}}
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return SqliteDB{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return SqliteDB{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return SqliteDB{}, err 
 	}
@@ -103,15 +106,15 @@ func NewSqliteInMemory(ctx context.Context,
         return SqliteDB{}, err
     }
 	{{if .IncludeMetrics}}
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return SqliteDB{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return SqliteDB{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return SqliteDB{}, err 
 	}
@@ -133,7 +136,7 @@ func NewSqliteInMemory(ctx context.Context,
 
 func (db *SqliteDB) QueryRow(ctx context.Context, query string, args ...any) row {
 	{{ if .IncludeTelemetry }}
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Sqllite")))
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -153,7 +156,7 @@ func (db *SqliteDB) QueryRow(ctx context.Context, query string, args ...any) row
 
 func (db *SqliteDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	{{if .IncludeTelemetry}}
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Sqllite")))
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -183,7 +186,7 @@ func (db *SqliteDB) Query(ctx context.Context, query string, args ...any) (rows,
 
 func (db *SqliteDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	{{if .IncludeTelemetry}}
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Sqllite")))
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
     defer span.End()
     {{end}}
 	{{if .IncludeLogger}}

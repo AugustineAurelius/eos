@@ -11,6 +11,9 @@ import (
     "github.com/jackc/pgx/v5/pgconn"
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
+	{{if .IncludeMetrics}}
+	"go.opentelemetry.io/otel/metric"
+	{{end}}
 	{{if .IncludeTelemetry}}
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -44,7 +47,7 @@ type PgxPoolDB struct {
 	{{end}}
 }
 
-func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
+func New{{.DatabaseName}}(ctx context.Context, provider PgxConnectionProvider,
 	{{if .IncludeLogger}}
 	logger logger,
 	{{end}}
@@ -61,15 +64,15 @@ func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
 		return PgxPoolDB{}, err
 	}
 	{{if .IncludeMetrics}}
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return PgxPoolDB{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return PgxPoolDB{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return PgxPoolDB{}, err
 	}
@@ -98,7 +101,7 @@ func (db *PgxPoolDB) Close() error {
 
 func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) row{
 	{{ if .IncludeTelemetry }}
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -119,7 +122,7 @@ func (db *PgxPoolDB) QueryRow(ctx context.Context, query string, args ...any) ro
 
 func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	{{if .IncludeTelemetry}}
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -149,7 +152,7 @@ func (db *PgxPoolDB) Query(ctx context.Context, query string, args ...any) (rows
 
 func (db *PgxPoolDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
     {{if .IncludeTelemetry}}
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
     defer span.End()
     {{end}}
 	{{if .IncludeLogger}}

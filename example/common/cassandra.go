@@ -11,6 +11,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	
+	"go.opentelemetry.io/otel/metric"
+	
+	
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -72,15 +75,15 @@ func NewCassandraDatabase(cp CassandraConnectionProvider,
 	}
 
 	
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("Cassandra"))
 	if err != nil {
 		return CassandraDatabase{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("Cassandra"))
 	if err != nil {
 		return CassandraDatabase{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("Cassandra"))
 	if err != nil {
 		return CassandraDatabase{}, err
 	}	

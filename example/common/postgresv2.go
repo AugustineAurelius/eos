@@ -12,6 +12,9 @@ import (
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
 	
+	"go.opentelemetry.io/otel/metric"
+	
+	
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -61,15 +64,15 @@ func NewPostgres(ctx context.Context, provider PgxConnectionProvider,
 		return PgxPoolDB{}, err
 	}
 	
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("Postgres"))
 	if err != nil {
 		return PgxPoolDB{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("Postgres"))
 	if err != nil {
 		return PgxPoolDB{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("Postgres"))
 	if err != nil {
 		return PgxPoolDB{}, err
 	}

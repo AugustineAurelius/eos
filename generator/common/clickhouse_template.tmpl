@@ -9,6 +9,9 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"go.uber.org/zap"
+	{{if .IncludeMetrics}}
+	"go.opentelemetry.io/otel/metric"
+	{{end}}
 	{{if .IncludeTelemetry}}
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -16,7 +19,7 @@ import (
     {{end}}
 )
 
-type ClickhouseConnectionProvider struct {
+type {{.DatabaseName}}ConnectionProvider struct {
 	Host      string
 	Port      int
 	Databasse string
@@ -39,7 +42,7 @@ type ClickHouseQuerier struct {
 	{{end}}
 }
 
-func NewClickhouse(cp ClickhouseConnectionProvider,
+func New{{.DatabaseName}}(cp ClickhouseConnectionProvider,
 	{{if .IncludeLogger}}
 	logger logger,
 	{{end}}
@@ -73,15 +76,15 @@ func NewClickhouse(cp ClickhouseConnectionProvider,
 	conn.SetConnMaxLifetime(time.Hour)
 
 	{{if .IncludeMetrics}}
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return ClickHouseQuerier{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return ClickHouseQuerier{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
 		return ClickHouseQuerier{}, err 
 	}
@@ -104,7 +107,7 @@ func NewClickhouse(cp ClickhouseConnectionProvider,
 
 func (db *ClickHouseQuerier) QueryRow(ctx context.Context, query string, args ...any) row {
 	{{ if .IncludeTelemetry }}
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -124,7 +127,7 @@ func (db *ClickHouseQuerier) QueryRow(ctx context.Context, query string, args ..
 
 func (db *ClickHouseQuerier) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	{{if .IncludeTelemetry}}
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -154,7 +157,7 @@ func (db *ClickHouseQuerier) Query(ctx context.Context, query string, args ...an
 
 func (db *ClickHouseQuerier) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	{{if .IncludeTelemetry}}
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
     defer span.End()
     {{end}}
 	{{if .IncludeLogger}}

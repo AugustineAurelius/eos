@@ -10,6 +10,9 @@ import (
 	"github.com/gocql/gocql"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	{{if .IncludeMetrics}}
+	"go.opentelemetry.io/otel/metric"
+	{{end}}
 	{{if .IncludeTelemetry}}
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -17,7 +20,7 @@ import (
     {{end}}
 )
 
-type CassandraConnectionProvider struct {
+type {{.DatabaseName}}ConnectionProvider struct {
 	Hosts    []string
 	Port     int
 	Keyspace string
@@ -25,11 +28,11 @@ type CassandraConnectionProvider struct {
 	Password string
 }
 
-func (cp *CassandraConnectionProvider) GetConnectionURL() string {
+func (cp *{{.DatabaseName}}ConnectionProvider) GetConnectionURL() string {
 	return fmt.Sprintf("Contact Points: %v, Port: %d, Keyspace: %s", cp.Hosts, cp.Port, cp.Keyspace)
 }
 
-type CassandraDatabase struct {
+type {{.DatabaseName}}Database struct {
 	session *gocql.Session
 	{{ if .IncludeLogger }}
 	logger logger
@@ -44,7 +47,7 @@ type CassandraDatabase struct {
 	{{end}}
 }
 
-func NewCassandraDatabase(cp CassandraConnectionProvider,
+func New{{.DatabaseName}}Database(cp CassandraConnectionProvider,
 	{{if .IncludeLogger}}
 	logger logger,
 	{{end}}
@@ -54,7 +57,7 @@ func NewCassandraDatabase(cp CassandraConnectionProvider,
 	{{if .IncludeMetrics}}
 	metrics metricProvider,
 	{{end}}
-) (CassandraDatabase, error) {
+) ({{.DatabaseName}}Database, error) {
 	cluster := gocql.NewCluster(cp.Hosts...)
 	cluster.RetryPolicy = &gocql.SimpleRetryPolicy{
 		NumRetries: 3,
@@ -68,24 +71,24 @@ func NewCassandraDatabase(cp CassandraConnectionProvider,
 	cluster.Keyspace = cp.Keyspace
 	session, err := cluster.CreateSession()
 	if err != nil {
-		return CassandraDatabase{}, err
+		return {{.DatabaseName}}Database{}, err
 	}
 
 	{{if .IncludeMetrics}}
-	queryCount, err := metrics.Int64Counter("queryCount")
+	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return CassandraDatabase{}, err
+		return {{.DatabaseName}}Database{}, err
 	}
-	execCount, err := metrics.Int64Counter("execCount")
+	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return CassandraDatabase{}, err
+		return {{.DatabaseName}}Database{}, err
 	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter")
+	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("{{.DatabaseName}}"))
 	if err != nil {
-		return CassandraDatabase{}, err
+		return {{.DatabaseName}}Database{}, err
 	}	
 	{{end}}
-	return CassandraDatabase{
+	return {{.DatabaseName}}Database{
 		session: session,
 		{{if .IncludeLogger}}
 		logger:          logger,
@@ -101,14 +104,14 @@ func NewCassandraDatabase(cp CassandraConnectionProvider,
 	}, nil
 }
 
-func (db *CassandraDatabase) Close() error {
+func (db *{{.DatabaseName}}Database) Close() error {
 	db.session.Close()
 	return nil
 }
 
-func (db *CassandraDatabase) QueryRow(ctx context.Context, query string, args ...any) row {
+func (db *{{.DatabaseName}}Database) QueryRow(ctx context.Context, query string, args ...any) row {
 	{{ if .IncludeTelemetry }}
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
+	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -124,14 +127,14 @@ func (db *CassandraDatabase) QueryRow(ctx context.Context, query string, args ..
 	{{if .IncludeMetrics}}
 	db.queryRowCounter.Add(ctx, 1)
 	{{end}}
-	return &CassandraRow{
+	return &{{.DatabaseName}}Row{
 		Row: r,
 	}
 }
 
-func (db *CassandraDatabase) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *{{.DatabaseName}}Database) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	{{if .IncludeTelemetry}}
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
+	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -146,12 +149,12 @@ func (db *CassandraDatabase) Query(ctx context.Context, query string, args ...an
 	{{if .IncludeMetrics}}
 	db.queryCount.Add(ctx, 1)
     {{end}}
-	return &CassandraRows{iter, iter.Scanner()}, nil
+	return &{{.DatabaseName}}Rows{iter, iter.Scanner()}, nil
 }
 
-func (db *CassandraDatabase) Exec(ctx context.Context, query string, args ...any) (result, error) {
+func (db *{{.DatabaseName}}Database) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	 {{if .IncludeTelemetry}}
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
+    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
     defer span.End()
     {{end}}
 	{{if .IncludeLogger}}
@@ -177,68 +180,68 @@ func (db *CassandraDatabase) Exec(ctx context.Context, query string, args ...any
 	{{if .IncludeMetrics}}
 	db.execCount.Add(ctx, 1)
     {{end}}
-	return &CassandraResult{}, err
+	return &{{.DatabaseName}}Result{}, err
 }
 
-func (db *CassandraDatabase) Begin(ctx context.Context) (Tx, error) {
-	return nil, errors.New("Transactions not supported in Cassandra")
+func (db *{{.DatabaseName}}Database) Begin(ctx context.Context) (Tx, error) {
+	return nil, errors.New("Transactions not supported in {{.DatabaseName}}")
 }
 
-type CassandraRows struct {
+type {{.DatabaseName}}Rows struct {
 	Iter    *gocql.Iter
 	Scanner gocql.Scanner
 }
 
-func (r *CassandraRows) Close() error {
+func (r *{{.DatabaseName}}Rows) Close() error {
 	return r.Iter.Close()
 }
 
-func (r *CassandraRows) Err() error {
+func (r *{{.DatabaseName}}Rows) Err() error {
 	return r.Scanner.Err()
 }
 
-func (r *CassandraRows) Next() bool {
+func (r *{{.DatabaseName}}Rows) Next() bool {
 	return r.Scanner.Next()
 }
 
-func (r *CassandraRows) Scan(dest ...any) error {
+func (r *{{.DatabaseName}}Rows) Scan(dest ...any) error {
 	return r.Scanner.Scan(dest...)
 }
 
-type CassandraRow struct {
+type {{.DatabaseName}}Row struct {
 	Row *gocql.Query
 }
 
-func (r *CassandraRow) Scan(dest ...any) error {
+func (r *{{.DatabaseName}}Row) Scan(dest ...any) error {
 	return r.Row.Scan(dest...)
 }
 
-type CassandraResult struct{}
+type {{.DatabaseName}}Result struct{}
 
-func (r *CassandraResult) RowsAffected() (int64, error) {
-	return 0, errors.New("RowsAffected not supported in Cassandra")
+func (r *{{.DatabaseName}}Result) RowsAffected() (int64, error) {
+	return 0, errors.New("RowsAffected not supported in {{.DatabaseName}}")
 }
 
-type CassandraTx struct{}
+type {{.DatabaseName}}Tx struct{}
 
-func (tx *CassandraTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
-	return nil, errors.New("Transactions not supported in Cassandra")
+func (tx *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+	return nil, errors.New("Transactions not supported in {{.DatabaseName}}")
 }
 
-func (tx *CassandraTx) QueryRow(ctx context.Context, query string, args ...any) row {
-	return &CassandraRow{}
+func (tx *{{.DatabaseName}}Tx) QueryRow(ctx context.Context, query string, args ...any) row {
+	return &{{.DatabaseName}}Row{}
 }
 
-func (tx *CassandraTx) Exec(ctx context.Context, query string, args ...any) (result, error) {
-	return nil, errors.New("Transactions not supported in Cassandra")
+func (tx *{{.DatabaseName}}Tx) Exec(ctx context.Context, query string, args ...any) (result, error) {
+	return nil, errors.New("Transactions not supported in {{.DatabaseName}}")
 }
 
-func (tx *CassandraTx) Commit(ctx context.Context) error {
-	return errors.New("Transactions not supported in Cassandra")
+func (tx *{{.DatabaseName}}Tx) Commit(ctx context.Context) error {
+	return errors.New("Transactions not supported in {{.DatabaseName}}")
 }
 
-func (tx *CassandraTx) Rollback(ctx context.Context) error {
-	return errors.New("Transactions not supported in Cassandra")
+func (tx *{{.DatabaseName}}Tx) Rollback(ctx context.Context) error {
+	return errors.New("Transactions not supported in {{.DatabaseName}}")
 }
 
 func ConvertArgs(args ...any) []any {
