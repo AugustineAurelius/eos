@@ -3,7 +3,6 @@ package repository_test
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -39,30 +38,24 @@ var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
 func Test_WithDatabases(t *testing.T) {
 	ctx := context.Background()
 	conn, err := initConn()
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	res, err := resource.New(ctx, resource.WithAttributes(serviceName))
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	defer func() {
-		if err := shutdownTracerProvider(ctx); err != nil {
-			log.Fatalf("failed to shutdown TracerProvider: %s", err)
-		}
+		err = shutdownTracerProvider(ctx)
+		assert.NoError(t, err)
 	}()
 	shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	defer func() {
-		if err := shutdownMeterProvider(ctx); err != nil {
-			log.Fatalf("failed to shutdown MeterProvider: %s", err)
-		}
+		err = shutdownMeterProvider(ctx)
+		assert.NoError(t, err)
 	}()
 	name := "go.opentelemetry.io/contrib/examples/otel-collector"
 	tracer := otel.Tracer(name)
