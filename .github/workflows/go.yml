@@ -52,5 +52,16 @@ jobs:
       run: go test -v ./...
 
     - name: Stop Docker Compose services
-      run: docker-compose -f ./example/repository/docker-compose.yaml down
+      run: |
+        export PATH=/usr/local/bin:$PATH
+          if command -v docker compose &> /dev/null
+          then
+              echo "Using docker compose"
+              docker compose -f ./example/repository/docker-compose.yaml up -d --build
+          else
+              echo "Installing docker-compose"
+              curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              docker-compose -f ./example/repository/docker-compose.yaml down
+          fi
       if: always()
