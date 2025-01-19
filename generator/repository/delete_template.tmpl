@@ -87,7 +87,7 @@ func (r *repository) DeleteMany{{.MessageName}}s(ctx context.Context, f {{.Messa
 
 	_, err := r.db.Exec(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("error querying database: %w", err)
+		return fmt.Errorf("error querying database: %w", err)
 	}
 
 	return err
