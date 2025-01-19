@@ -146,7 +146,7 @@ b := sq.Select(
 
     var {{.MessageName | lower}}s []{{.MessageName}}
 
-	rows, err := run.Query(ctx, query, args...)
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
 	}
