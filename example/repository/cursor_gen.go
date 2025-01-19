@@ -3,35 +3,35 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"errors"
-	common "github.com/AugustineAurelius/eos/example/common" 
+	"fmt"
 
+	common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
 )
 
 // builderParams represents optional query parameters.
-type builderParams struct {
-	OrderBy   *string // Column and direction for sorting (e.g., "id ASC")
-	SearchCol *string // Column to search in (e.g., "name")
+type BuilderParams struct {
+	OrderBy    *string // Column and direction for sorting (e.g., "id ASC")
+	SearchCol  *string // Column to search in (e.g., "name")
 	SearchTerm *string // Term to search for (e.g., "alice")
-	Offset    *int    // Initial offset for pagination
-	Limit     *int    // Number of rows to fetch per batch
+	Offset     *int    // Initial offset for pagination
+	Limit      *int    // Number of rows to fetch per batch
 }
 
 type Cursor struct {
-	pool      common.Querier
-	builder   sq.SelectBuilder
-	rows      []UserModel
-	index     int
-	offset    int
-	limit     int
-	params    builderParams
-	ctx       context.Context
+	pool    common.Querier
+	builder sq.SelectBuilder
+	rows    []UserModel
+	index   int
+	offset  int
+	limit   int
+	params  BuilderParams
+	ctx     context.Context
 }
 
-func (r *repository) NewCursor(ctx context.Context, f UserFilter, params builderParams) *Cursor {
+func (r *repository) NewCursor(ctx context.Context, f UserFilter, params BuilderParams) *Cursor {
 	limit := 10
 	if params.Limit != nil {
 		limit = *params.Limit
@@ -51,14 +51,14 @@ func (r *repository) NewCursor(ctx context.Context, f UserFilter, params builder
 	b = ApplyWhere(b, f)
 
 	return &Cursor{
-		pool:      r.db,
-		builder:   b,
-		rows:      make([]UserModel, 0, limit),
-		index:    -1,
-		offset:   offset,
-		limit:    limit,
-		params:   params,
-		ctx:      ctx,
+		pool:    r.db,
+		builder: b,
+		rows:    make([]UserModel, 0, limit),
+		index:   -1,
+		offset:  offset,
+		limit:   limit,
+		params:  params,
+		ctx:     ctx,
 	}
 }
 
@@ -86,10 +86,14 @@ func (c *Cursor) fetchRows() error {
 	}
 	defer rows.Close()
 
-	c.rows = make([]UserModel, 0,c.limit)
+	c.rows = make([]UserModel, 0, c.limit)
 	for rows.Next() {
 		var item UserModel
-		if err := rows.Scan(&item); err != nil {
+		if err := rows.Scan(
+			&item.ID,
+			&item.Name,
+			&item.Email,
+		); err != nil {
 			return err
 		}
 		c.rows = append(c.rows, item)
@@ -98,6 +102,7 @@ func (c *Cursor) fetchRows() error {
 	if len(c.rows) > 0 {
 		c.offset += c.limit
 	}
+
 	return nil
 }
 
@@ -126,7 +131,7 @@ func (c *Cursor) Current() (UserModel, error) {
 	if c.index >= 0 && c.index < len(c.rows) {
 		return c.rows[c.index], nil
 	}
-	return UserModel{} , errors.New("not found")
+	return UserModel{}, errors.New("not found")
 }
 
 func (c *Cursor) Reset() {

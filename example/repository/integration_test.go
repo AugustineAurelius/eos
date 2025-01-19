@@ -8,10 +8,10 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/cassandra"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
-
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	"github.com/testcontainers/testcontainers-go/wait"
 
 	"github.com/AugustineAurelius/eos/example/common"
 
@@ -31,6 +31,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	"github.com/brianvoe/gofakeit/v7"
 )
 
 var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
@@ -194,7 +196,22 @@ func Test_WithDatabases(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, []repository.User{*testUser}, users)
 
+			for i := 0; i < 1000; i++ {
+				err := userRepo.CreateUser(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: gofakeit.Email()})
+				assert.NoError(t, err)
+			}
+
+			if c.DatabaseName == "postgres" || c.DatabaseName == "sqlite" {
+				cur := userRepo.NewCursor(ctx, repository.UserFilter{}, repository.BuilderParams{})
+
+				var count = 0
+				for cur.Next() {
+					count++
+				}
+				assert.Equal(t, 1001, count)
+			}
 		})
+
 	}
 }
 
@@ -244,5 +261,5 @@ type mode struct {
 }
 
 func (m *mode) IsProduction() bool {
-	return false
+	return true
 }
