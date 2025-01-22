@@ -7,9 +7,9 @@ import (
 
 // Table and column name constants for {{.MessageName}}
 const (
-	Table{{.MessageName}} = "{{.TableName}}"
+	Table{{.MessageName}} = "{{.TableName | snakeCase}}"
 {{- range .Fields }}
-	Column{{$.MessageName}}{{.Name}} = "{{.Column}}"
+	Column{{$.MessageName}}{{.Name}} = "{{.Column | snakeCase}}"
 {{- end }}
 )
 

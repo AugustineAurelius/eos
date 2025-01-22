@@ -13,6 +13,7 @@ import (
 
 	"github.com/AugustineAurelius/eos/pkg/errors"
 	"github.com/AugustineAurelius/eos/pkg/helpers"
+	myStrings "github.com/AugustineAurelius/eos/pkg/strings"
 )
 
 //go:embed *
@@ -98,6 +99,7 @@ func generateFile(fileName, tmplPath string, data MessageData) {
 	// Parse the template
 	tmpl, err := template.New(fileName).Funcs(template.FuncMap{
 		"lower": strings.ToLower,
+		"upper": strings.ToUpper,
 		"columns": func(fields []Field) string {
 			cols := make([]string, 0, len(fields))
 			for _, field := range fields {
@@ -113,6 +115,9 @@ func generateFile(fileName, tmplPath string, data MessageData) {
 			return strings.Join(scanFields, ", ")
 		},
 		"Placeholder": func(index int) string { return fmt.Sprintf("$%d", index+1) },
+		"snakeCase": func(s string) string {
+			return myStrings.ToSnakeCase(s)
+		},
 	}).Parse(string(tmplContent)) // Convert content to string
 	if err != nil {
 		errors.FailErr(fmt.Errorf("Failed to parse template %s: %v\n", tmplPath, err))
@@ -165,7 +170,7 @@ func parseStruct(node *ast.File, structName string) ([]Field, error) {
 			for _, field := range structType.Fields.List {
 				fieldName := field.Names[0].Name
 				fieldType := exprToString(field.Type)
-				column := strings.ToLower(fieldName)
+				column := fieldName
 				fields = append(fields, Field{
 					Name:   fieldName,
 					Type:   fieldType,

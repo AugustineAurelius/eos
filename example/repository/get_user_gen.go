@@ -29,6 +29,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
+		ColumnUserUserTime,
 	).
 	From(TableUser).
 	Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Question).MustSql()
@@ -38,6 +39,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 		&userModel.ID,
 		&userModel.Name,
 		&userModel.Email,
+		&userModel.UserTime,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
@@ -64,6 +66,7 @@ func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, err
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
+		ColumnUserUserTime,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
@@ -85,6 +88,7 @@ func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, err
 			&userModel.ID,
 			&userModel.Name,
 			&userModel.Email,
+			&userModel.UserTime,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
