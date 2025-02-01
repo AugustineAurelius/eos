@@ -164,7 +164,7 @@ func (c *Cursor) Prev() bool {
 
 func (c *Cursor) Current() ({{.MessageName}}Model, error) {
 	if c.closed {
-		return UserModel{}, errors.New("cursor is closed")
+		return {{.MessageName}}Model{}, errors.New("cursor is closed")
 	}
 
 	if c.index >= 0 && c.index < len(c.rows) {
