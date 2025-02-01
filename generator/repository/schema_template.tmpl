@@ -2,7 +2,9 @@
 package {{.PackageName}}
 
 import (
-	"github.com/google/uuid"
+    {{- range .Imports }}
+    {{ . }}
+    {{- end }}
 )
 
 // Table and column name constants for {{.MessageName}}

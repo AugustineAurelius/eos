@@ -36,6 +36,7 @@ type MessageData struct {
 	TxRunnerPath string
 	CommonPath   string
 	WithTx       bool
+	Imports      []string
 }
 
 func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
@@ -51,7 +52,10 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 	if err != nil {
 		errors.FailErr(fmt.Errorf("Failed to parse Go file: %w\n", err))
 	}
-
+	var imports []string
+	for _, imp := range node.Imports {
+		imports = append(imports, imp.Path.Value)
+	}
 	fields, err := parseStruct(node, structName)
 	if err != nil {
 		errors.FailErr(err)
@@ -71,6 +75,7 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 		TxRunnerPath: helpers.GetModulePath() + txRunnerPath,
 		CommonPath:   helpers.GetModulePath() + commonPath,
 		WithTx:       withTX,
+		Imports:      imports,
 	}
 
 	generateFile("schema.go", "schema_template.tmpl", data)

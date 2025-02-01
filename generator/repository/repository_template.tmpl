@@ -3,9 +3,12 @@ package {{.PackageName}}
 
 import (
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 	common "{{.CommonPath}}"
+    {{- range .Imports }}
+    {{ . }}
+    {{- end }}
 )
+
 
 
 type repository struct{

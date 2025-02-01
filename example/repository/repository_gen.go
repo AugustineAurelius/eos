@@ -3,9 +3,10 @@ package repository
 
 import (
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 	common "github.com/AugustineAurelius/eos/example/common"
+    "github.com/google/uuid"
 )
+
 
 
 type repository struct{
