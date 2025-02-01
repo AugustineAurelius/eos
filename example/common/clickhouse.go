@@ -10,13 +10,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"go.uber.org/zap"
 	
-	"go.opentelemetry.io/otel/metric"
 	
-	
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-    
 )
 
 type ClickhouseConnectionProvider struct {
@@ -33,13 +27,7 @@ type ClickhouseQuerier struct {
 	logger logger
 	
 	
-	telemetry tracer
-	
     
-	queryCount      int64Counter
-	execCount       int64Counter
-	queryRowCounter int64Counter
-	
 }
 
 func NewClickhouse(cp ClickhouseConnectionProvider,
@@ -47,10 +35,6 @@ func NewClickhouse(cp ClickhouseConnectionProvider,
 	logger logger,
 	
 	
-	telemetry tracer, 
-	
-	
-	metrics metricProvider,
 	
 ) (ClickhouseQuerier, error) {
 	conn := clickhouse.OpenDB(&clickhouse.Options{
@@ -76,30 +60,11 @@ func NewClickhouse(cp ClickhouseConnectionProvider,
 	conn.SetConnMaxLifetime(time.Hour)
 
 	
-	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("Clickhouse"))
-	if err != nil {
-		return ClickhouseQuerier{}, err
-	}
-	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("Clickhouse"))
-	if err != nil {
-		return ClickhouseQuerier{}, err
-	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("Clickhouse"))
-	if err != nil {
-		return ClickhouseQuerier{}, err 
-	}
-	
 	return ClickhouseQuerier{client: conn,
 		
 		logger:          logger,
 		
 		
-		telemetry:       telemetry,
-		
-		
-		queryCount:      queryCount,
-		execCount:       execCount,
-		queryRowCounter: queryRowCounter,
 		
 }, nil
 }
@@ -107,9 +72,6 @@ func NewClickhouse(cp ClickhouseConnectionProvider,
 
 func (db *ClickhouseQuerier) QueryRow(ctx context.Context, query string, args ...any) row {
 	
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
-	defer span.End()
-    
 	
 	start := time.Now()
 	db.logger.Info("Executing QueryRow", zap.String("query", query))
@@ -120,16 +82,11 @@ func (db *ClickhouseQuerier) QueryRow(ctx context.Context, query string, args ..
 	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
 	
 	
-	db.queryRowCounter.Add(ctx, 1)
-	
 	return &ClickhouseRow{row}
 }
 
 func (db *ClickhouseQuerier) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
-	defer span.End()
-    
 	
     start := time.Now()
     db.logger.Info("Executing Query", zap.String("query", query))
@@ -137,9 +94,6 @@ func (db *ClickhouseQuerier) Query(ctx context.Context, query string, args ...an
 	rows, err := db.client.QueryContext(ctx, query, args...)
 	if err != nil {
 		
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
-        
 		
         db.logger.Error("Query failed", zap.Error(err))
 		
@@ -150,16 +104,11 @@ func (db *ClickhouseQuerier) Query(ctx context.Context, query string, args ...an
     db.logger.Info("Query succeeded", zap.Float64("duration", duration))
 	
 	
-	db.queryCount.Add(ctx, 1)
-    
 	return &ClickhouseRows{rows}, nil
 }
 
 func (db *ClickhouseQuerier) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Clickhouse")))
-    defer span.End()
-    
 	
 	start := time.Now()
     db.logger.Info("Executing Exec", zap.String("query", query))
@@ -167,9 +116,6 @@ func (db *ClickhouseQuerier) Exec(ctx context.Context, query string, args ...any
 	res, err := db.client.ExecContext(ctx, query, args...)
 	if err != nil {
 		
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
-        
 		
         db.logger.Error("Exec failed", zap.Error(err))
 		
@@ -180,8 +126,6 @@ func (db *ClickhouseQuerier) Exec(ctx context.Context, query string, args ...any
     db.logger.Info("Exec succeeded", zap.Float64("duration", duration))
 	
 	
-	db.execCount.Add(ctx, 1)
-    
 	return &ClickhouseResult{res}, nil
 }
 

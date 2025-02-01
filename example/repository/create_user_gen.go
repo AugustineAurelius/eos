@@ -27,7 +27,7 @@ func (r *repository) CreateUser(ctx context.Context, user *User) error {
 func create(ctx context.Context, run common.Querier, user *User) error {
 	model := Converter(*user)
 	query, args := sq.Insert(TableUser).
-		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserUserTime).
+		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail).
 		Values(model.Values()...).PlaceholderFormat(sq.Question).MustSql()
 
 	if _, err := run.Exec(ctx, query, args...); err != nil {

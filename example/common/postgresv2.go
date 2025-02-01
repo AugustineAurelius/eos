@@ -12,13 +12,7 @@ import (
     "github.com/jackc/pgx/v5/pgxpool"
     "go.uber.org/zap"
 	
-	"go.opentelemetry.io/otel/metric"
 	
-	
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-    
 )
 
 
@@ -38,13 +32,7 @@ type PostgresDB struct {
 	logger logger
 	
 	
-	telemetry tracer
-	
     
-	queryCount      int64Counter
-	execCount       int64Counter
-	queryRowCounter int64Counter
-	
 }
 
 func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
@@ -52,27 +40,10 @@ func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
 	logger logger,
 	
 	
-	telemetry tracer, 
-	
-	
-	metrics metricProvider,
 	
 ) (PostgresDB, error) {
 	url := provider.GetConnectionURL()
 	pool, err := pgxpool.New(ctx, url)
-	if err != nil {
-		return PostgresDB{}, err
-	}
-	
-	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("Postgres"))
-	if err != nil {
-		return PostgresDB{}, err
-	}
-	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("Postgres"))
-	if err != nil {
-		return PostgresDB{}, err
-	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("Postgres"))
 	if err != nil {
 		return PostgresDB{}, err
 	}
@@ -82,12 +53,6 @@ func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
 		logger:          logger,
 		
 		
-		telemetry:       telemetry,
-		
-		
-		queryCount:      queryCount,
-		execCount:       execCount,
-		queryRowCounter: queryRowCounter,
 		
 
 	}, nil
@@ -101,9 +66,6 @@ func (db *PostgresDB) Close() error {
 
 func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) row{
 	
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
-	defer span.End()
-    
 	
 	start := time.Now()
 	db.logger.Info("Executing QueryRow", zap.String("query", query))
@@ -114,17 +76,12 @@ func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) r
 	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
 	
 	
-	db.queryRowCounter.Add(ctx, 1)
-	
 
 	return &PostgresRow{row}
 }
 
 func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
-	defer span.End()
-    
 	
     start := time.Now()
     db.logger.Info("Executing Query", zap.String("query", query))
@@ -132,9 +89,6 @@ func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (row
 	rows, err := db.pool.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
-        
 		
         db.logger.Error("Query failed", zap.Error(err))
 		
@@ -145,15 +99,10 @@ func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (row
     db.logger.Info("Query succeeded", zap.Float64("duration", duration))
 	
 	
-	db.queryCount.Add(ctx, 1)
-    
 	return &PostgresRows{rows}, nil
 }
 
 func (db *PostgresDB) Exec(ctx context.Context, query string, args ...any) (result, error) {
-    
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Postgres")))
-    defer span.End()
     
 	
 	start := time.Now()
@@ -161,9 +110,6 @@ func (db *PostgresDB) Exec(ctx context.Context, query string, args ...any) (resu
 	
     r, err := db.pool.Exec(ctx, ReplaceQuestions(query), args...)
     if err != nil {
-        
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
         
 		
         db.logger.Error("Exec failed", zap.Error(err))
@@ -175,8 +121,6 @@ func (db *PostgresDB) Exec(ctx context.Context, query string, args ...any) (resu
     db.logger.Info("Exec succeeded", zap.Float64("duration", duration))
 	
 	
-	db.execCount.Add(ctx, 1)
-    
     return &PostgresResult{r}, err
 }
 

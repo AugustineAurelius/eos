@@ -11,13 +11,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 	
-	"go.opentelemetry.io/otel/metric"
 	
-	
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-    
 )
 
 type CassandraConnectionProvider struct {
@@ -38,13 +32,7 @@ type CassandraDatabase struct {
 	logger logger
 	
 	
-	telemetry tracer
-	
     
-	queryCount      int64Counter
-	execCount       int64Counter
-	queryRowCounter int64Counter
-	
 }
 
 func NewCassandraDatabase(cp CassandraConnectionProvider,
@@ -52,10 +40,6 @@ func NewCassandraDatabase(cp CassandraConnectionProvider,
 	logger logger,
 	
 	
-	telemetry tracer, 
-	
-	
-	metrics metricProvider,
 	
 ) (CassandraDatabase, error) {
 	cluster := gocql.NewCluster(cp.Hosts...)
@@ -75,31 +59,12 @@ func NewCassandraDatabase(cp CassandraConnectionProvider,
 	}
 
 	
-	queryCount, err := metrics.Int64Counter("queryCount",metric.WithDescription("Cassandra"))
-	if err != nil {
-		return CassandraDatabase{}, err
-	}
-	execCount, err := metrics.Int64Counter("execCount",metric.WithDescription("Cassandra"))
-	if err != nil {
-		return CassandraDatabase{}, err
-	}
-	queryRowCounter, err := metrics.Int64Counter("queryRowCounter",metric.WithDescription("Cassandra"))
-	if err != nil {
-		return CassandraDatabase{}, err
-	}	
-	
 	return CassandraDatabase{
 		session: session,
 		
 		logger:          logger,
 		
 		
-		telemetry:       telemetry,
-		
-		
-		queryCount:      queryCount,
-		execCount:       execCount,
-		queryRowCounter: queryRowCounter,
 		
 	}, nil
 }
@@ -111,9 +76,6 @@ func (db *CassandraDatabase) Close() error {
 
 func (db *CassandraDatabase) QueryRow(ctx context.Context, query string, args ...any) row {
 	
-	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
-	defer span.End()
-    
 	
 	start := time.Now()
 	db.logger.Info("Executing QueryRow", zap.String("query", query))
@@ -125,8 +87,6 @@ func (db *CassandraDatabase) QueryRow(ctx context.Context, query string, args ..
 	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
 	
 	
-	db.queryRowCounter.Add(ctx, 1)
-	
 	return &CassandraRow{
 		Row: r,
 	}
@@ -134,9 +94,6 @@ func (db *CassandraDatabase) QueryRow(ctx context.Context, query string, args ..
 
 func (db *CassandraDatabase) Query(ctx context.Context, query string, args ...any) (rows, error) {
 	
-	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
-	defer span.End()
-    
 	
     start := time.Now()
     db.logger.Info("Executing Query", zap.String("query", query))
@@ -147,16 +104,11 @@ func (db *CassandraDatabase) Query(ctx context.Context, query string, args ...an
     db.logger.Info("Query succeeded", zap.Float64("duration", duration))
 	
 	
-	db.queryCount.Add(ctx, 1)
-    
 	return &CassandraRows{iter, iter.Scanner()}, nil
 }
 
 func (db *CassandraDatabase) Exec(ctx context.Context, query string, args ...any) (result, error) {
 	 
-    ctx, span := db.telemetry.Start(ctx, "Exec",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "Cassandra")))
-    defer span.End()
-    
 	
 	start := time.Now()
     db.logger.Info("Executing Exec", zap.String("query", query))
@@ -164,9 +116,6 @@ func (db *CassandraDatabase) Exec(ctx context.Context, query string, args ...any
 	err := db.session.Query(query, ConvertArgs(args...)...).
 		WithContext(context.Background()).Exec()
     if err != nil {
-        
-		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
         
 		
         db.logger.Error("Exec failed", zap.Error(err))
@@ -178,8 +127,6 @@ func (db *CassandraDatabase) Exec(ctx context.Context, query string, args ...any
     db.logger.Info("Exec succeeded", zap.Float64("duration", duration))
 	
 	
-	db.execCount.Add(ctx, 1)
-    
 	return &CassandraResult{}, err
 }
 

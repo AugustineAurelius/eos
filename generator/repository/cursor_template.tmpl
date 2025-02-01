@@ -12,12 +12,13 @@ import (
 )
 
 // builderParams represents optional query parameters.
-type builderParams struct {
+type BuilderParams struct {
 	OrderBy   *string // Column and direction for sorting (e.g., "id ASC")
 	SearchCol *string // Column to search in (e.g., "name")
 	SearchTerm *string // Term to search for (e.g., "alice")
 	Offset    *int    // Initial offset for pagination
 	Limit     *int    // Number of rows to fetch per batch
+	MaxRows    *int
 }
 
 type Cursor struct {
@@ -27,11 +28,13 @@ type Cursor struct {
 	index     int
 	offset    int
 	limit     int
-	params    builderParams
+	params    BuilderParams
 	ctx       context.Context
+	totalRows int 
+	closed    bool 
 }
 
-func (r *repository) NewCursor(ctx context.Context, f {{.MessageName}}Filter, params builderParams) *Cursor {
+func (r *repository) NewCursor(ctx context.Context, f {{.MessageName}}Filter, params BuilderParams) *Cursor {
 	limit := 10
 	if params.Limit != nil {
 		limit = *params.Limit
@@ -59,10 +62,20 @@ func (r *repository) NewCursor(ctx context.Context, f {{.MessageName}}Filter, pa
 		limit:    limit,
 		params:   params,
 		ctx:      ctx,
+		totalRows: 0,
+		closed:    false,
 	}
 }
 
 func (c *Cursor) fetchRows() error {
+	if c.closed {
+		return errors.New("cursor is closed")
+	}
+
+	// Check if we've reached the maximum number of rows
+	if c.params.MaxRows != nil && c.totalRows >= *c.params.MaxRows {
+		return nil // No more rows to fetch
+	}
 	builder := c.builder
 
 	if c.params.SearchCol != nil && c.params.SearchTerm != nil {
@@ -72,8 +85,18 @@ func (c *Cursor) fetchRows() error {
 	if c.params.OrderBy != nil {
 		builder = builder.OrderBy(*c.params.OrderBy)
 	}
+	remainingRows := c.limit
+	if c.params.MaxRows != nil {
+		remainingRows = *c.params.MaxRows - c.totalRows
+		if remainingRows <= 0 {
+			return nil 		
+		}
+		if remainingRows > c.limit {
+			remainingRows = c.limit
+		}
+	}
 
-	builder = builder.Limit(uint64(c.limit)).Offset(uint64(c.offset))
+	builder = builder.Limit(uint64(remainingRows)).Offset(uint64(c.offset))
 
 	sql, args, err := builder.ToSql()
 	if err != nil {
@@ -89,19 +112,33 @@ func (c *Cursor) fetchRows() error {
 	c.rows = make([]{{.MessageName}}Model, 0,c.limit)
 	for rows.Next() {
 		var item {{.MessageName}}Model
-		if err := rows.Scan(&item); err != nil {
-			return err
+		err := rows.Scan(
+		{{- range .Fields }}
+			&item.{{.Name}},
+		{{- end }}
+		)
+		if err != nil {
+			return fmt.Errorf("error scanning row: %w", err)
 		}
+		c.totalRows++
 		c.rows = append(c.rows, item)
 	}
 
 	if len(c.rows) > 0 {
-		c.offset += c.limit
+		c.offset += remainingRows
 	}
 	return nil
 }
 
 func (c *Cursor) Next() bool {
+	if c.closed {
+		return false
+	}
+
+	// Check if we've reached the maximum number of rows
+	if c.params.MaxRows != nil && c.totalRows >= *c.params.MaxRows && c.index >= len(c.rows)-1 {
+		return false
+	}
 	if c.index >= len(c.rows)-1 {
 		if err := c.fetchRows(); err != nil || len(c.rows) == 0 {
 			return false
@@ -115,6 +152,9 @@ func (c *Cursor) Next() bool {
 }
 
 func (c *Cursor) Prev() bool {
+	if c.closed {
+		return false
+	}
 	if c.index > 0 {
 		c.index--
 		return true
@@ -123,6 +163,10 @@ func (c *Cursor) Prev() bool {
 }
 
 func (c *Cursor) Current() ({{.MessageName}}Model, error) {
+	if c.closed {
+		return UserModel{}, errors.New("cursor is closed")
+	}
+
 	if c.index >= 0 && c.index < len(c.rows) {
 		return c.rows[c.index], nil
 	}
@@ -130,7 +174,22 @@ func (c *Cursor) Current() ({{.MessageName}}Model, error) {
 }
 
 func (c *Cursor) Reset() {
+	if c.closed {
+		return
+	}
+
 	c.index = -1
 	c.offset = 0
-	c.rows = make([]{{.MessageName}}Model, 0)
+	c.totalRows = 0
+	c.rows = c.rows[:0] // Clear the slice while keeping the underlying array
+}
+
+// Close releases all resources held by the cursor.
+func (c *Cursor) Close() {
+	if c.closed {
+		return
+	}
+
+	c.rows = nil // Free the memory held by the rows slice
+	c.closed = true
 }

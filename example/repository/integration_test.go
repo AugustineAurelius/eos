@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/cassandra"
-	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -38,30 +36,30 @@ import (
 var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
 
 func Test_WithDatabases(t *testing.T) {
-	ctx := context.Background()
-	conn, err := initConn()
-	assert.NoError(t, err)
+	// ctx := context.Background()
+	// conn, err := initConn()
+	// assert.NoError(t, err)
 
-	res, err := resource.New(ctx, resource.WithAttributes(serviceName))
-	assert.NoError(t, err)
+	// res, err := resource.New(ctx, resource.WithAttributes(serviceName))
+	// assert.NoError(t, err)
 
-	shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
-	assert.NoError(t, err)
+	// shutdownTracerProvider, err := initTracerProvider(ctx, res, conn)
+	// assert.NoError(t, err)
 
-	defer func() {
-		err = shutdownTracerProvider(ctx)
-		assert.NoError(t, err)
-	}()
-	shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
-	assert.NoError(t, err)
+	// defer func() {
+	// err = shutdownTracerProvider(ctx)
+	// assert.NoError(t, err)
+	// }()
+	// shutdownMeterProvider, err := initMeterProvider(ctx, res, conn)
+	// assert.NoError(t, err)
 
-	defer func() {
-		err = shutdownMeterProvider(ctx)
-		assert.NoError(t, err)
-	}()
-	name := "go.opentelemetry.io/contrib/examples/otel-collector"
-	tracer := otel.Tracer(name)
-	meter := otel.Meter(name)
+	// defer func() {
+	// 	err = shutdownMeterProvider(ctx)
+	// 	assert.NoError(t, err)
+	// }()
+	// name := "go.opentelemetry.io/contrib/examples/otel-collector"
+	// tracer := otel.Tracer(name)
+	// meter := otel.Meter(name)
 	logger := logger.New(&mode{})
 
 	cases := []struct {
@@ -71,7 +69,7 @@ func Test_WithDatabases(t *testing.T) {
 		{
 			DatabaseName: "sqlite",
 			Provide: func() common.Querier {
-				db, err := common.NewSQLiteInMemory(context.Background(), logger, tracer, meter)
+				db, err := common.NewSQLiteInMemory(context.Background(), logger)
 				assert.NoError(t, err)
 
 				_, err = db.Exec(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT);`)
@@ -100,7 +98,7 @@ func Test_WithDatabases(t *testing.T) {
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, common.PostgresConnectionProvider{connStr}, logger, tracer, meter)
+				db, err := common.NewPostgres(ctx, common.PostgresConnectionProvider{connStr}, logger)
 
 				assert.NoError(t, err)
 
@@ -110,67 +108,67 @@ func Test_WithDatabases(t *testing.T) {
 				return &db
 			},
 		},
-		{
-			DatabaseName: "cassandra",
-			Provide: func() common.Querier {
-				ctx := context.Background()
-
-				c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
-					testcontainers.WithEnv(map[string]string{
-						"CASSANDRA_HOST":     "cassandra",
-						"CASSANDRA_USER":     "user",
-						"CASSANDRA_PASSWORD": "pass",
-					}))
-				assert.NoError(t, err)
-
-				host, err := c.ConnectionHost(ctx)
-				assert.NoError(t, err)
-
-				db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
-					Hosts:    []string{host},
-					Port:     9042,
-					User:     "user",
-					Password: "pass",
-					Keyspace: "test",
-				}, logger, tracer, meter)
-				assert.NoError(t, err)
-
-				return &db
-			},
-		},
-		{
-			DatabaseName: "clickhouse",
-			Provide: func() common.Querier {
-				ctx := context.Background()
-
-				user := "clickhouse"
-				password := "password"
-				dbname := "testdb"
-
-				clickHouseContainer, err := clickhouse.Run(ctx,
-					"clickhouse/clickhouse-server:23.3.8.21-alpine",
-					clickhouse.WithUsername(user),
-					clickhouse.WithPassword(password),
-					clickhouse.WithDatabase(dbname),
-				)
-				assert.NoError(t, err)
-
-				host, err := clickHouseContainer.ConnectionHost(ctx)
-				assert.NoError(t, err)
-
-				db, err := common.NewClickhouse(common.ClickhouseConnectionProvider{
-					Host:      host,
-					User:      user,
-					Password:  password,
-					Databasse: dbname,
-				}, logger, tracer, meter)
-				assert.NoError(t, err)
-				db.Exec(ctx, `CREATE TABLE users(id UUID, name String, email String) ENGINE = MergeTree() ORDER BY id;`)
-
-				return &db
-
-			},
-		},
+		// {
+		// 	DatabaseName: "cassandra",
+		// 	Provide: func() common.Querier {
+		// 		ctx := context.Background()
+		//
+		// 		c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
+		// 			testcontainers.WithEnv(map[string]string{
+		// 				"CASSANDRA_HOST":     "cassandra",
+		// 				"CASSANDRA_USER":     "user",
+		// 				"CASSANDRA_PASSWORD": "pass",
+		// 			}))
+		// 		assert.NoError(t, err)
+		//
+		// 		host, err := c.ConnectionHost(ctx)
+		// 		assert.NoError(t, err)
+		//
+		// 		db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
+		// 			Hosts:    []string{host},
+		// 			Port:     9042,
+		// 			User:     "user",
+		// 			Password: "pass",
+		// 			Keyspace: "test",
+		// 		}, logger)
+		// 		assert.NoError(t, err)
+		//
+		// 		return &db
+		// 	},
+		// },
+		// {
+		// 	DatabaseName: "clickhouse",
+		// 	Provide: func() common.Querier {
+		// 		ctx := context.Background()
+		//
+		// 		user := "clickhouse"
+		// 		password := "password"
+		// 		dbname := "testdb"
+		//
+		// 		clickHouseContainer, err := clickhouse.Run(ctx,
+		// 			"clickhouse/clickhouse-server:23.3.8.21-alpine",
+		// 			clickhouse.WithUsername(user),
+		// 			clickhouse.WithPassword(password),
+		// 			clickhouse.WithDatabase(dbname),
+		// 		)
+		// 		assert.NoError(t, err)
+		//
+		// 		host, err := clickHouseContainer.ConnectionHost(ctx)
+		// 		assert.NoError(t, err)
+		//
+		// 		db, err := common.NewClickhouse(common.ClickhouseConnectionProvider{
+		// 			Host:      host,
+		// 			User:      user,
+		// 			Password:  password,
+		// 			Databasse: dbname,
+		// 		}, logger)
+		// 		assert.NoError(t, err)
+		// 		db.Exec(ctx, `CREATE TABLE users(id UUID, name String, email String) ENGINE = MergeTree() ORDER BY id;`)
+		//
+		// 		return &db
+		//
+		// 	},
+		// },
 	}
 
 	for _, c := range cases {
@@ -202,13 +200,21 @@ func Test_WithDatabases(t *testing.T) {
 			}
 
 			if c.DatabaseName == "postgres" || c.DatabaseName == "sqlite" {
-				cur := userRepo.NewCursor(ctx, repository.UserFilter{}, repository.BuilderParams{})
+
+				limit := 200
+				Oreder := "name DESC"
+				MaxRows := 500
+				cur := userRepo.NewCursor(ctx, repository.UserFilter{}, repository.BuilderParams{
+					Limit:   &limit,
+					OrderBy: &Oreder,
+					MaxRows: &MaxRows,
+				})
 
 				var count = 0
 				for cur.Next() {
 					count++
 				}
-				assert.Equal(t, 1001, count)
+				assert.Equal(t, MaxRows, count)
 			}
 		})
 

@@ -26,8 +26,6 @@ type UserFilter struct {
   names []string
   email *string
   emails []string
-  usertime *int
-  usertimes []int
 }
 
 func NewFilter() *UserFilter{
@@ -75,20 +73,6 @@ func (f *UserFilter) Emails (emails []string)  *UserFilter {
   f.emails =  emails
   return f
 }
-func (f *UserFilter) UserTime (usertime int)  *UserFilter {
-  f.usertime = &usertime
-  return f
-}
-
-func (f *UserFilter) AddOneToUserTimes (usertime int)  *UserFilter {
-  f.usertimes = append(f.usertimes, usertime)
-  return f
-}
-
-func (f *UserFilter) UserTimes (usertimes []int)  *UserFilter {
-  f.usertimes =  usertimes
-  return f
-}
 
 
 func ApplyWhere[B interface {
@@ -112,12 +96,6 @@ func ApplyWhere[B interface {
 	if f.emails != nil {
       b = b.Where(sq.Eq{ColumnUserEmail: f.emails})
     }
-	if f.usertime != nil {
-      b = b.Where(sq.Eq{ColumnUserUserTime: *f.usertime})
-    }
-	if f.usertimes != nil {
-      b = b.Where(sq.Eq{ColumnUserUserTime: f.usertimes})
-    }
   return b
 }
 
@@ -126,7 +104,6 @@ type UserUpdate struct {
   id *uuid.UUID
   name *string
   email *string
-  usertime *int
 }
 func (f *UserUpdate) ID (id uuid.UUID)  *UserUpdate {
   f.id = &id
@@ -138,10 +115,6 @@ func (f *UserUpdate) Name (name string)  *UserUpdate {
 }
 func (f *UserUpdate) Email (email string)  *UserUpdate {
   f.email = &email
-  return f
-}
-func (f *UserUpdate) UserTime (usertime int)  *UserUpdate {
-  f.usertime = &usertime
   return f
 }
 
@@ -157,9 +130,6 @@ func ApplySet[B interface {
     }
 	if f.email != nil {
       b = b.Set(ColumnUserEmail, *f.email)
-    }
-	if f.usertime != nil {
-      b = b.Set(ColumnUserUserTime, *f.usertime)
     }
 
   return b
