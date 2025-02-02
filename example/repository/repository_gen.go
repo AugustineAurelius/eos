@@ -75,6 +75,9 @@ func (f *UserFilter) Emails (emails []*string)  *UserFilter {
   return f
 }
 
+func (f *UserFilter) Build()  UserFilter {
+   return *f
+}
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
@@ -123,6 +126,9 @@ func (u *UserUpdate) Email (email *string)  *UserUpdate {
   return u
 }
 
+func (u *UserUpdate) Build()  UserUpdate {
+  return *u
+}
 
 func ApplySet[B interface {
     Set(column string, value interface{}) B

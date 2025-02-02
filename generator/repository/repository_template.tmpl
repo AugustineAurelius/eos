@@ -51,6 +51,9 @@ func (f *{{$.MessageName}}Filter) {{.Name}}s ({{.Name | lower}}s []{{.Type}})  *
 }
 {{- end }}
 
+func (f *{{$.MessageName}}Filter) Build()  {{$.MessageName}}Filter {
+   return *f
+}
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
@@ -84,6 +87,9 @@ func (u *{{$.MessageName}}Update) {{.Name}} ({{.Name | lower}} {{.Type}})  *{{$.
 }
 {{- end }}
 
+func (u *{{$.MessageName}}Update) Build()  {{$.MessageName}}Update {
+  return *u
+}
 
 func ApplySet[B interface {
     Set(column string, value interface{}) B
