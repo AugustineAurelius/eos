@@ -193,13 +193,21 @@ func Test_WithDatabases(t *testing.T) {
 			f := repository.NewFilter().AddOneToIDs(id)
 			users, err := userRepo.GetManyUsers(ctx, *f)
 			assert.NoError(t, err)
-			assert.Equal(t, []repository.User{*testUser}, users)
+			assert.Equal(t, repository.Users{*testUser}, users)
 
 			for i := 0; i < 1000; i++ {
-				// email := gofakeit.Email()
-				err := userRepo.CreateUser(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: nil})
+				email := gofakeit.Email()
+				err := userRepo.CreateUser(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: &email})
 				assert.NoError(t, err)
 			}
+
+			users, err = userRepo.GetManyUsers(ctx, *repository.NewFilter())
+			assert.NoError(t, err)
+
+			filtered := users.FilterUsers(func(i repository.User) bool {
+				return i.Name == "name"
+			}).ToIDs()
+			assert.Equal(t, filtered[0], id)
 
 			if c.DatabaseName == "postgres" || c.DatabaseName == "sqlite" {
 

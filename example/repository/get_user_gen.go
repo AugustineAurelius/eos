@@ -51,7 +51,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 }
 
 // GetManyUser retrieves a User by filter.
-func (r *repository) GetManyUsers(ctx context.Context, f UserFilter) ([]User, error) {
+func (r *repository) GetManyUsers(ctx context.Context, f UserFilter) (Users, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return getMany(ctx, tx, f)
     } else {
@@ -59,7 +59,7 @@ func (r *repository) GetManyUsers(ctx context.Context, f UserFilter) ([]User, er
     }
 }
 
-func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, error) {
+func getMany(ctx context.Context, run common.Querier, f UserFilter) (Users, error) {
 	b := sq.Select(
 		ColumnUserID,
 		ColumnUserName,
@@ -70,7 +70,7 @@ func getMany(ctx context.Context, run common.Querier, f UserFilter) ([]User, err
 
     query, args := 	b.MustSql()
 
-    var users []User
+    var users Users
 
 	rows, err := run.Query(ctx, query, args...)
 	if err != nil {

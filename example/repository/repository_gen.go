@@ -106,20 +106,21 @@ type UserUpdate struct {
   name *string
   email **string
 }
+
 func NewUpdate() *UserUpdate{
 	return &UserUpdate{}
 }
-func (f *UserUpdate) ID (id uuid.UUID)  *UserUpdate {
-  f.id = &id
-  return f
+func (u *UserUpdate) ID (id uuid.UUID)  *UserUpdate {
+  u.id = &id
+  return u
 }
-func (f *UserUpdate) Name (name string)  *UserUpdate {
-  f.name = &name
-  return f
+func (u *UserUpdate) Name (name string)  *UserUpdate {
+  u.name = &name
+  return u
 }
-func (f *UserUpdate) Email (email *string)  *UserUpdate {
-  f.email = &email
-  return f
+func (u *UserUpdate) Email (email *string)  *UserUpdate {
+  u.email = &email
+  return u
 }
 
 
@@ -137,4 +138,37 @@ func ApplySet[B interface {
     }
 
   return b
+}
+
+type Users []User
+func (s Users) ToIDs ()  []uuid.UUID {
+	output := make([]uuid.UUID, 0, len(s))
+	for _, item := range s {
+		output = append(output, item.ID)
+	}
+	return output
+}
+func (s Users) ToNames ()  []string {
+	output := make([]string, 0, len(s))
+	for _, item := range s {
+		output = append(output, item.Name)
+	}
+	return output
+}
+func (s Users) ToEmails ()  []*string {
+	output := make([]*string, 0, len(s))
+	for _, item := range s {
+		output = append(output, item.Email)
+	}
+	return output
+}
+
+func (s Users) FilterUsers(f func(i User) bool)  Users {
+	output := make(Users, 0, len(s))
+	for _, item := range s {
+		if f(item) {
+			output = append(output, item)
+		}
+	}
+	return output
 }

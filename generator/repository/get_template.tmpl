@@ -59,7 +59,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*{{.MessageName
 }
 
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
+func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ({{.MessageName}}s, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return getMany(ctx, tx, f)
     } else {
@@ -67,7 +67,7 @@ func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageN
     }
 }
 
-func getMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
+func getMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) ({{.MessageName}}s, error) {
 	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
@@ -78,7 +78,7 @@ func getMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) 
 
     query, args := 	b.MustSql()
 
-    var {{.MessageName | lower}}s []{{.MessageName}}
+    var {{.MessageName | lower}}s {{.MessageName}}s
 
 	rows, err := run.Query(ctx, query, args...)
 	if err != nil {
@@ -133,7 +133,7 @@ func (r *repository) Get{{.MessageName}}(ctx context.Context,  id uuid.UUID) (*{
 
 
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ([]{{.MessageName}}, error) {
+func (r *repository) GetMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) ({{.MessageName}}s, error) {
 b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
@@ -144,7 +144,7 @@ b := sq.Select(
 
     query, args := 	b.MustSql()
 
-    var {{.MessageName | lower}}s []{{.MessageName}}
+    var {{.MessageName | lower}}s {{.MessageName}}s
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
