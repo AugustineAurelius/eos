@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/cassandra"
+	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -108,67 +110,67 @@ func Test_WithDatabases(t *testing.T) {
 				return &db
 			},
 		},
-		// {
-		// 	DatabaseName: "cassandra",
-		// 	Provide: func() common.Querier {
-		// 		ctx := context.Background()
-		//
-		// 		c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
-		// 			testcontainers.WithEnv(map[string]string{
-		// 				"CASSANDRA_HOST":     "cassandra",
-		// 				"CASSANDRA_USER":     "user",
-		// 				"CASSANDRA_PASSWORD": "pass",
-		// 			}))
-		// 		assert.NoError(t, err)
-		//
-		// 		host, err := c.ConnectionHost(ctx)
-		// 		assert.NoError(t, err)
-		//
-		// 		db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
-		// 			Hosts:    []string{host},
-		// 			Port:     9042,
-		// 			User:     "user",
-		// 			Password: "pass",
-		// 			Keyspace: "test",
-		// 		}, logger)
-		// 		assert.NoError(t, err)
-		//
-		// 		return &db
-		// 	},
-		// },
-		// {
-		// 	DatabaseName: "clickhouse",
-		// 	Provide: func() common.Querier {
-		// 		ctx := context.Background()
-		//
-		// 		user := "clickhouse"
-		// 		password := "password"
-		// 		dbname := "testdb"
-		//
-		// 		clickHouseContainer, err := clickhouse.Run(ctx,
-		// 			"clickhouse/clickhouse-server:23.3.8.21-alpine",
-		// 			clickhouse.WithUsername(user),
-		// 			clickhouse.WithPassword(password),
-		// 			clickhouse.WithDatabase(dbname),
-		// 		)
-		// 		assert.NoError(t, err)
-		//
-		// 		host, err := clickHouseContainer.ConnectionHost(ctx)
-		// 		assert.NoError(t, err)
-		//
-		// 		db, err := common.NewClickhouse(common.ClickhouseConnectionProvider{
-		// 			Host:      host,
-		// 			User:      user,
-		// 			Password:  password,
-		// 			Databasse: dbname,
-		// 		}, logger)
-		// 		assert.NoError(t, err)
-		// 		db.Exec(ctx, `CREATE TABLE users(id UUID, name String, email String) ENGINE = MergeTree() ORDER BY id;`)
-		//
-		// 		return &db
-		//
-		// 	},
-		// },
+		{
+			DatabaseName: "cassandra",
+			Provide: func() common.Querier {
+				ctx := context.Background()
+
+				c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
+					testcontainers.WithEnv(map[string]string{
+						"CASSANDRA_HOST":     "cassandra",
+						"CASSANDRA_USER":     "user",
+						"CASSANDRA_PASSWORD": "pass",
+					}))
+				assert.NoError(t, err)
+
+				host, err := c.ConnectionHost(ctx)
+				assert.NoError(t, err)
+
+				db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
+					Hosts:    []string{host},
+					Port:     9042,
+					User:     "user",
+					Password: "pass",
+					Keyspace: "test",
+				}, logger)
+				assert.NoError(t, err)
+
+				return &db
+			},
+		},
+		{
+			DatabaseName: "clickhouse",
+			Provide: func() common.Querier {
+				ctx := context.Background()
+
+				user := "clickhouse"
+				password := "password"
+				dbname := "testdb"
+
+				clickHouseContainer, err := clickhouse.Run(ctx,
+					"clickhouse/clickhouse-server:23.3.8.21-alpine",
+					clickhouse.WithUsername(user),
+					clickhouse.WithPassword(password),
+					clickhouse.WithDatabase(dbname),
+				)
+				assert.NoError(t, err)
+
+				host, err := clickHouseContainer.ConnectionHost(ctx)
+				assert.NoError(t, err)
+
+				db, err := common.NewClickhouse(common.ClickhouseConnectionProvider{
+					Host:      host,
+					User:      user,
+					Password:  password,
+					Databasse: dbname,
+				}, logger)
+				assert.NoError(t, err)
+				db.Exec(ctx, `CREATE TABLE users(id UUID, name String, email String) ENGINE = MergeTree() ORDER BY id;`)
+
+				return &db
+
+			},
+		},
 	}
 
 	for _, c := range cases {
