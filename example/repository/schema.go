@@ -24,7 +24,7 @@ type UserModel struct {
 		Name string
 	
 	
-		Email string
+		Email *string
 	
 }
 

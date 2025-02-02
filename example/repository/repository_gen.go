@@ -25,8 +25,8 @@ type UserFilter struct {
   ids []uuid.UUID
   name *string
   names []string
-  email *string
-  emails []string
+  email **string
+  emails []*string
 }
 
 func NewFilter() *UserFilter{
@@ -60,17 +60,17 @@ func (f *UserFilter) Names (names []string)  *UserFilter {
   f.names =  names
   return f
 }
-func (f *UserFilter) Email (email string)  *UserFilter {
+func (f *UserFilter) Email (email *string)  *UserFilter {
   f.email = &email
   return f
 }
 
-func (f *UserFilter) AddOneToEmails (email string)  *UserFilter {
+func (f *UserFilter) AddOneToEmails (email *string)  *UserFilter {
   f.emails = append(f.emails, email)
   return f
 }
 
-func (f *UserFilter) Emails (emails []string)  *UserFilter {
+func (f *UserFilter) Emails (emails []*string)  *UserFilter {
   f.emails =  emails
   return f
 }
@@ -104,7 +104,10 @@ func ApplyWhere[B interface {
 type UserUpdate struct {
   id *uuid.UUID
   name *string
-  email *string
+  email **string
+}
+func NewUpdate() *UserUpdate{
+	return &UserUpdate{}
 }
 func (f *UserUpdate) ID (id uuid.UUID)  *UserUpdate {
   f.id = &id
@@ -114,7 +117,7 @@ func (f *UserUpdate) Name (name string)  *UserUpdate {
   f.name = &name
   return f
 }
-func (f *UserUpdate) Email (email string)  *UserUpdate {
+func (f *UserUpdate) Email (email *string)  *UserUpdate {
   f.email = &email
   return f
 }

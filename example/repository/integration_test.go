@@ -180,7 +180,8 @@ func Test_WithDatabases(t *testing.T) {
 			userRepo := repository.New(db)
 
 			id := uuid.New()
-			testUser := &repository.User{ID: id, Name: "name", Email: "email"}
+			email := "email"
+			testUser := &repository.User{ID: id, Name: "name", Email: &email}
 
 			err := userRepo.CreateUser(ctx, testUser)
 			assert.NoError(t, err)
@@ -195,7 +196,8 @@ func Test_WithDatabases(t *testing.T) {
 			assert.Equal(t, []repository.User{*testUser}, users)
 
 			for i := 0; i < 1000; i++ {
-				err := userRepo.CreateUser(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: gofakeit.Email()})
+				// email := gofakeit.Email()
+				err := userRepo.CreateUser(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: nil})
 				assert.NoError(t, err)
 			}
 

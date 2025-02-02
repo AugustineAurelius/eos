@@ -72,6 +72,10 @@ type {{.MessageName}}Update struct {
   {{.Name | lower}} *{{.Type}}
 {{- end }}
 }
+func NewUpdate() *{{.MessageName}}Update{
+	return &{{.MessageName}}Update{}
+}
+
 
 
 {{- range .Fields }}

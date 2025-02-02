@@ -9,6 +9,6 @@ import (
 type User struct {
 	ID    uuid.UUID
 	Name  string
-	Email string
+	Email *string
 	// UserTime int
 }
