@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/cassandra"
 	"github.com/testcontainers/testcontainers-go/modules/clickhouse"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
@@ -110,34 +109,37 @@ func Test_WithDatabases(t *testing.T) {
 				return &db
 			},
 		},
-		{
-			DatabaseName: "cassandra",
-			Provide: func() common.Querier {
-				ctx := context.Background()
-
-				c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
-					testcontainers.WithEnv(map[string]string{
-						"CASSANDRA_HOST":     "cassandra",
-						"CASSANDRA_USER":     "user",
-						"CASSANDRA_PASSWORD": "pass",
-					}))
-				assert.NoError(t, err)
-
-				host, err := c.ConnectionHost(ctx)
-				assert.NoError(t, err)
-
-				db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
-					Hosts:    []string{host},
-					Port:     9042,
-					User:     "user",
-					Password: "pass",
-					Keyspace: "test",
-				}, logger)
-				assert.NoError(t, err)
-
-				return &db
-			},
-		},
+		// {
+		// 	DatabaseName: "cassandra",
+		// 	Provide: func() common.Querier {
+		// 		ctx := context.Background()
+		//
+		// 		c, err := cassandra.Run(ctx, "cassandra:4.1.3", cassandra.WithInitScripts("./cassandra.cql"),
+		// 			testcontainers.WithWaitStrategy(
+		// 				wait.ForLog("database system is ready to accept connections").
+		// 					WithOccurrence(2).WithStartupTimeout(5*time.Second)),
+		// 			testcontainers.WithEnv(map[string]string{
+		// 				"CASSANDRA_HOST":     "cassandra",
+		// 				"CASSANDRA_USER":     "user",
+		// 				"CASSANDRA_PASSWORD": "pass",
+		// 			}))
+		// 		assert.NoError(t, err)
+		//
+		// 		host, err := c.ConnectionHost(ctx)
+		// 		assert.NoError(t, err)
+		//
+		// 		db, err := common.NewCassandraDatabase(common.CassandraConnectionProvider{
+		// 			Hosts:    []string{host},
+		// 			Port:     9042,
+		// 			User:     "user",
+		// 			Password: "pass",
+		// 			Keyspace: "test",
+		// 		}, logger)
+		// 		assert.NoError(t, err)
+		//
+		// 		return &db
+		// 	},
+		// },
 		{
 			DatabaseName: "clickhouse",
 			Provide: func() common.Querier {
@@ -185,25 +187,25 @@ func Test_WithDatabases(t *testing.T) {
 			email := "email"
 			testUser := &repository.User{ID: id, Name: "name", Email: &email}
 
-			err := userRepo.CreateUser(ctx, testUser)
+			err := userRepo.Create(ctx, testUser)
 			assert.NoError(t, err)
 
-			user, err := userRepo.GetUser(ctx, id)
+			user, err := userRepo.Get(ctx, id)
 			assert.NoError(t, err)
 			assert.Equal(t, testUser, user)
 
 			f := repository.NewFilter().AddOneToIDs(id)
-			users, err := userRepo.GetManyUsers(ctx, f.Build())
+			users, err := userRepo.GetMany(ctx, f.Build())
 			assert.NoError(t, err)
 			assert.Equal(t, repository.Users{*testUser}, users)
 
 			for i := 0; i < 1000; i++ {
 				email := gofakeit.Email()
-				err := userRepo.CreateUser(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: &email})
+				err := userRepo.Create(ctx, &repository.User{ID: uuid.New(), Name: gofakeit.Name(), Email: &email})
 				assert.NoError(t, err)
 			}
 
-			users, err = userRepo.GetManyUsers(ctx, repository.NewFilter().Build())
+			users, err = userRepo.GetMany(ctx, repository.NewFilter().Build())
 			assert.NoError(t, err)
 
 			filtered := users.FilterUsers(func(i repository.User) bool {

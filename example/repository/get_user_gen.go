@@ -15,7 +15,7 @@ import (
 
 
 // GetUser retrieves a User by ID.
-func (r *repository) GetUser(ctx context.Context,  id uuid.UUID) (*User, error) {
+func (r *repository) Get(ctx context.Context,  id uuid.UUID) (*User, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return get(ctx, tx, id)
     } else {
@@ -51,7 +51,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 }
 
 // GetManyUser retrieves a User by filter.
-func (r *repository) GetManyUsers(ctx context.Context, f UserFilter) (Users, error) {
+func (r *repository) GetMany(ctx context.Context, f UserFilter) (Users, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return getMany(ctx, tx, f)
     } else {

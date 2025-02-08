@@ -15,7 +15,7 @@ import (
 
 
 // CreateUser inserts a new User into the database.
-func (r *repository) CreateUser(ctx context.Context, user *User) error {
+func (r *repository) Create (ctx context.Context, user *User) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return create(ctx, tx, user)
     } else {

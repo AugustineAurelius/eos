@@ -5,6 +5,7 @@ go 1.23.4
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/Masterminds/squirrel v1.5.4
+	github.com/brianvoe/gofakeit/v7 v7.1.2
 	github.com/dave/jennifer v1.7.1
 	github.com/gocql/gocql v1.7.0
 	github.com/google/uuid v1.6.0
@@ -35,7 +36,6 @@ require (
 	github.com/ClickHouse/ch-go v0.61.5 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
-	github.com/brianvoe/gofakeit/v7 v7.1.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect

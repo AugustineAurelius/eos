@@ -15,7 +15,7 @@ import (
 
 
 // DeleteUser deletes a User by ID.
-func (r *repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
+func (r *repository) Delete(ctx context.Context, id uuid.UUID) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return delete(ctx, tx, id)
     } else {
@@ -34,7 +34,7 @@ func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 }
 
 // DeleteManyUser retrieves a User by filter.
-func (r *repository) DeleteManyUser(ctx context.Context, f UserFilter) error {
+func (r *repository) DeleteMany(ctx context.Context, f UserFilter) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return deleteMany(ctx, tx, f)
     } else {

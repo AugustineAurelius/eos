@@ -23,7 +23,7 @@ import (
 
 {{if .WithTx}}
 // Delete{{.MessageName}} deletes a {{.MessageName}} by ID.
-func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) error {
+func (r *repository) Delete(ctx context.Context, id uuid.UUID) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return delete(ctx, tx, id)
     } else {
@@ -42,7 +42,7 @@ func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 }
 
 // DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *repository) DeleteMany{{.MessageName}}(ctx context.Context, f {{.MessageName}}Filter) error {
+func (r *repository) DeleteMany(ctx context.Context, f {{.MessageName}}Filter) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return deleteMany(ctx, tx, f)
     } else {
@@ -67,7 +67,7 @@ func deleteMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filte
 
 {{else}}
 // Delete{{.MessageName}} deletes a {{.MessageName}} by ID.
-func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) error {
+func (r *repository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := sq.Delete(Table{{.MessageName}}).
 		Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question).MustSql()
 
@@ -78,7 +78,7 @@ func (r *repository) Delete{{.MessageName}}(ctx context.Context, id uuid.UUID) e
 }
 
 // DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *repository) DeleteMany{{.MessageName}}s(ctx context.Context, f {{.MessageName}}Filter) error {
+func (r *repository) DeleteMany(ctx context.Context, f {{.MessageName}}Filter) error {
 	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
