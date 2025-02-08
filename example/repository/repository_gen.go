@@ -9,12 +9,12 @@ import (
 
 
 
-type repository struct{
+type Repository struct{
 	db common.Querier
 }
 
-func New(db common.Querier) *repository {
-	return &repository{
+func New(db common.Querier) *Repository {
+	return &Repository{
 		db: db,
 	}
 }

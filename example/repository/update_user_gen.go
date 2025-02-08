@@ -16,7 +16,7 @@ import (
 
 
 // UpdateUser updates an existing User in the database.
-func (r *repository) Update(ctx context.Context,  id uuid.UUID, u UserUpdate) error {
+func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u UserUpdate) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return update(ctx, tx, id, u)
     } else {
@@ -35,7 +35,7 @@ func update(ctx context.Context, run common.Querier, id uuid.UUID, u UserUpdate)
 }
 
 // UpdateUser updates an existing User in the database.
-func (r *repository) UpdateMany(ctx context.Context,  f UserFilter, u  UserUpdate) error {
+func (r *Repository) UpdateMany(ctx context.Context,  f UserFilter, u  UserUpdate) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return updateMany(ctx, tx, f, u)
     } else {
