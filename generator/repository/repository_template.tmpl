@@ -139,12 +139,12 @@ func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
 	{{- if contains .Type "*"}}
 	if asc {
 		sort.Slice(s, func(i, j int) bool {
-			return *s[i].{{.Name}}.Before( *s[j].{{.Name}})
+			return s[i].{{.Name}}.Before( *s[j].{{.Name}})
 		})
 		return s
 	}	
 	sort.Slice(s, func(i, j int) bool {
-		return *s[i].{{.Name}}.After( *s[j].{{.Name}})
+		return s[i].{{.Name}}.After( *s[j].{{.Name}})
 	})
 	return  s
 	{{- else}}
