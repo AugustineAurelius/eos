@@ -134,9 +134,35 @@ func (s {{$.MessageName}}s) FindBy{{.Name}} (finder {{.Type}})  ({{$.MessageName
 
 {{- range .Fields }}
 	{{- if contains .Type "[]"}}
+	{{- else if contains .Type "time.Time"}}
+func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
+	{{- if contains .Type "*"}}
+	if asc {
+		sort.Slice(s, func(i, j int) bool {
+			return *s[i].{{.Name}}.Before( *s[j].{{.Name}})
+		})
+		return s
+	}	
+	sort.Slice(s, func(i, j int) bool {
+		return *s[i].{{.Name}}.After( *s[j].{{.Name}})
+	})
+	return  s
+	{{- else}}
+	if asc {
+		sort.Slice(s, func(i, j int) bool {
+			return s[i].{{.Name}}.Before( s[j].{{.Name}})
+		})
+		return s
+	}	
+	sort.Slice(s, func(i, j int) bool {
+		return s[i].{{.Name}}.After(s[j].{{.Name}})
+	})
+	return  s
+	{{- end}}
+
 	{{- else if contains .Type "."}}
 	{{- else}}
-	func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
+func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
 	{{- if contains .Type "*"}}
 	if asc {
 		sort.Slice(s, func(i, j int) bool {

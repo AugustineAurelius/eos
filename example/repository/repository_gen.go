@@ -193,7 +193,7 @@ func (s Users) FindByEmail (finder *string)  (User, bool) {
 	}
 	return   User {}, false
 }
-	func (s Users) SortByName (asc bool)  Users {
+func (s Users) SortByName (asc bool)  Users {
 	if asc {
 		sort.Slice(s, func(i, j int) bool {
 			return s[i].Name < s[j].Name
@@ -205,7 +205,7 @@ func (s Users) FindByEmail (finder *string)  (User, bool) {
 	})
 	return  s
 }
-	func (s Users) SortByEmail (asc bool)  Users {
+func (s Users) SortByEmail (asc bool)  Users {
 	if asc {
 		sort.Slice(s, func(i, j int) bool {
 			return *s[i].Email < *s[j].Email
