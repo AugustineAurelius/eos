@@ -159,7 +159,7 @@ func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
 	})
 	return  s
 	{{- end}}
-
+}
 	{{- else if contains .Type "."}}
 	{{- else}}
 func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
