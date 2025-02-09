@@ -230,5 +230,32 @@ func (s Users) FilterFunc(f func(i User) bool)  Users {
 	}
 	return output
 }
+func (s Users) GetFirstID()  (*uuid.UUID, bool) {
+	if len(s) < 1 {
+		return nil, false
+	}
+	return &s[0].ID, true
+}
+func (s Users) GetFirstName()  (*string, bool) {
+	if len(s) < 1 {
+		return nil, false
+	}
+	return &s[0].Name, true
+}
+func (s Users) GetFirstEmail()  (**string, bool) {
+	if len(s) < 1 {
+		return nil, false
+	}
+	return &s[0].Email, true
+}
+
+
+
+func (s Users) GetFirst()  (User, bool) {
+	if len(s) < 1 {
+		return User{}, false
+	}
+	return s[0], true
+}
 
 

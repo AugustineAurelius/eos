@@ -204,4 +204,22 @@ func (s {{$.MessageName}}s) FilterFunc(f func(i {{.MessageName}}) bool)  {{.Mess
 	return output
 }
 
+{{- range .Fields }}
+func (s {{$.MessageName}}s) GetFirst{{.Name}}()  (*{{.Type}}, bool) {
+	if len(s) < 1 {
+		return nil, false
+	}
+	return &s[0].{{.Name}}, true
+}
+{{- end }}
+
+
+
+func (s {{$.MessageName}}s) GetFirst()  ({{.MessageName}}, bool) {
+	if len(s) < 1 {
+		return {{.MessageName}}{}, false
+	}
+	return s[0], true
+}
+
 
