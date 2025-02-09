@@ -3,6 +3,7 @@ package repository
 
 import (
 	sq "github.com/Masterminds/squirrel"
+	"sort"
 	common "github.com/AugustineAurelius/eos/example/common"
     "github.com/google/uuid"
 )
@@ -170,31 +171,57 @@ func (s Users) ToEmails ()  []*string {
 }
 func (s Users) FindByID (finder uuid.UUID)  (User, bool) {
 	for i := 0; i < len(s); i++{
-    if s[i].ID  == finder {
-      return s[i], true 
-    }
+		if s[i].ID  == finder {
+			return s[i], true 
+		}
 	}
 	return   User {}, false
 }
 func (s Users) FindByName (finder string)  (User, bool) {
 	for i := 0; i < len(s); i++{
-    if s[i].Name  == finder {
-      return s[i], true 
-    }
+		if s[i].Name  == finder {
+			return s[i], true 
+		}
 	}
 	return   User {}, false
 }
 func (s Users) FindByEmail (finder *string)  (User, bool) {
 	for i := 0; i < len(s); i++{
-    if s[i].Email  == finder {
-      return s[i], true 
-    }
+		if s[i].Email  == finder {
+			return s[i], true 
+		}
 	}
 	return   User {}, false
 }
+	func (s Users) SortByName (asc bool)  Users {
+	if asc {
+		sort.Slice(s, func(i, j int) bool {
+			return s[i].Name < s[j].Name
+		})
+		return s
+	}	
+	sort.Slice(s, func(i, j int) bool {
+		return s[i].Name > s[j].Name
+	})
+	return  s
+}
+	func (s Users) SortByEmail (asc bool)  Users {
+	if asc {
+		sort.Slice(s, func(i, j int) bool {
+			return *s[i].Email < *s[j].Email
+		})
+		return s
+	}	
+	sort.Slice(s, func(i, j int) bool {
+		return *s[i].Email > *s[j].Email
+	})
+	return  s
+}
 
 
-func (s Users) FilterUsers(f func(i User) bool)  Users {
+
+
+func (s Users) FilterFunc(f func(i User) bool)  Users {
 	output := make(Users, 0, len(s))
 	for i := 0; i < len(s); i++{ 
 		if f(s[i]) {

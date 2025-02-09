@@ -10,5 +10,6 @@ type User struct {
 	ID    uuid.UUID
 	Name  string
 	Email *string
+	// Addresses []string
 	// UserTime int
 }

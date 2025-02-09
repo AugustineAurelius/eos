@@ -103,8 +103,9 @@ func generateFile(fileName, tmplPath string, data MessageData) {
 
 	// Parse the template
 	tmpl, err := template.New(fileName).Funcs(template.FuncMap{
-		"lower": strings.ToLower,
-		"upper": strings.ToUpper,
+		"lower":    strings.ToLower,
+		"upper":    strings.ToUpper,
+		"contains": strings.Contains,
 		"columns": func(fields []Field) string {
 			cols := make([]string, 0, len(fields))
 			for _, field := range fields {

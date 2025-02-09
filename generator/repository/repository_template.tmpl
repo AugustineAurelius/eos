@@ -3,6 +3,7 @@ package {{.PackageName}}
 
 import (
 	sq "github.com/Masterminds/squirrel"
+	"sort"
 	common "{{.CommonPath}}"
     {{- range .Imports }}
     {{ . }}
@@ -117,18 +118,56 @@ func (s {{$.MessageName}}s) To{{.Name}}s ()  []{{.Type}} {
 
 
 {{- range .Fields }}
+	{{- if contains .Type "[]"}}
+	{{- else}}
 func (s {{$.MessageName}}s) FindBy{{.Name}} (finder {{.Type}})  ({{$.MessageName}}, bool) {
 	for i := 0; i < len(s); i++{
-    if s[i].{{.Name}}  == finder {
-      return s[i], true 
-    }
+		if s[i].{{.Name}}  == finder {
+			return s[i], true 
+		}
 	}
 	return   {{$.MessageName}} {}, false
 }
 {{- end }}
+{{- end}}
 
 
-func (s {{$.MessageName}}s) Filter{{.MessageName}}s(f func(i {{.MessageName}}) bool)  {{.MessageName}}s {
+{{- range .Fields }}
+	{{- if contains .Type "[]"}}
+	{{- else if contains .Type "."}}
+	{{- else}}
+	func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
+	{{- if contains .Type "*"}}
+	if asc {
+		sort.Slice(s, func(i, j int) bool {
+			return *s[i].{{.Name}} < *s[j].{{.Name}}
+		})
+		return s
+	}	
+	sort.Slice(s, func(i, j int) bool {
+		return *s[i].{{.Name}} > *s[j].{{.Name}}
+	})
+	return  s
+	{{- else}}
+	if asc {
+		sort.Slice(s, func(i, j int) bool {
+			return s[i].{{.Name}} < s[j].{{.Name}}
+		})
+		return s
+	}	
+	sort.Slice(s, func(i, j int) bool {
+		return s[i].{{.Name}} > s[j].{{.Name}}
+	})
+	return  s
+	{{- end}}
+}
+	{{- end}}
+{{- end }}
+
+
+
+
+func (s {{$.MessageName}}s) FilterFunc(f func(i {{.MessageName}}) bool)  {{.MessageName}}s {
 	output := make({{.MessageName}}s, 0, len(s))
 	for i := 0; i < len(s); i++{ 
 		if f(s[i]) {
