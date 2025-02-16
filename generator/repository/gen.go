@@ -62,7 +62,7 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 	}
 
 	packageName := node.Name.Name
-	tableName := strings.ToLower(structName) + "s"
+	tableName := structName + "s"
 
 	data := MessageData{
 		PackageName:  packageName,
