@@ -1,3 +1,5 @@
+//go:build !windows
+
 package helpers
 
 import (
@@ -37,6 +39,7 @@ func GetPackagePath() string {
 }
 
 func GetModulePath() string {
+
 	goModPath, _ := exec.Command("go", "env", "GOMOD").Output()
 	goModPathStr := strings.TrimSpace(string(goModPath))
 
