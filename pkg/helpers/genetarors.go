@@ -1,5 +1,3 @@
-//go:build !windows
-
 package helpers
 
 import (
@@ -47,5 +45,5 @@ func GetModulePath() string {
 	moduleLine := strings.Split(string(data), "\n")[0]
 	modulePath := strings.TrimPrefix(moduleLine, "module ")
 
-	return modulePath
+	return strings.TrimSpace(modulePath)
 }
