@@ -27,7 +27,7 @@ func (p *PostgresConnectionProvider) GetConnectionURL() string {
 }
 
 type PostgresDB struct {
-    pool     *pgxpool.Pool
+    Pool     *pgxpool.Pool
 	
 	logger logger
 	
@@ -48,7 +48,7 @@ func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
 		return PostgresDB{}, err
 	}
 	
-	return PostgresDB{pool: pool,
+	return PostgresDB{Pool: pool,
 		
 		logger:          logger,
 		
@@ -59,7 +59,7 @@ func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
 }
 
 func (db *PostgresDB) Close() error {
-	db.pool.Close()
+	db.Pool.Close()
 	return nil
 }
 
@@ -70,7 +70,7 @@ func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) r
 	start := time.Now()
 	db.logger.Info("Executing QueryRow", zap.String("query", query))
 	
-	row := db.pool.QueryRow(ctx, ReplaceQuestions(query), args...)
+	row := db.Pool.QueryRow(ctx, ReplaceQuestions(query), args...)
 	
 	duration := time.Since(start).Seconds()
 	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
@@ -86,7 +86,7 @@ func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (row
     start := time.Now()
     db.logger.Info("Executing Query", zap.String("query", query))
 	
-	rows, err := db.pool.Query(ctx, ReplaceQuestions(query), args...)
+	rows, err := db.Pool.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		
 		
@@ -108,7 +108,7 @@ func (db *PostgresDB) Exec(ctx context.Context, query string, args ...any) (resu
 	start := time.Now()
     db.logger.Info("Executing Exec", zap.String("query", query))
 	
-    r, err := db.pool.Exec(ctx, ReplaceQuestions(query), args...)
+    r, err := db.Pool.Exec(ctx, ReplaceQuestions(query), args...)
     if err != nil {
         
 		
@@ -125,7 +125,7 @@ func (db *PostgresDB) Exec(ctx context.Context, query string, args ...any) (resu
 }
 
 func (db *PostgresDB) BeginTransaction(ctx context.Context) (Tx, error) {
-	tx, err := db.pool.Begin(ctx)
+	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -33,7 +33,7 @@ func (p *{{.DatabaseName}}ConnectionProvider) GetConnectionURL() string {
 }
 
 type {{.DatabaseName}}DB struct {
-    pool     *pgxpool.Pool
+    Pool     *pgxpool.Pool
 	{{ if .IncludeLogger }}
 	logger logger
 	{{end}}
@@ -77,7 +77,7 @@ func New{{.DatabaseName}}(ctx context.Context, provider {{.DatabaseName}}Connect
 		return {{.DatabaseName}}DB{}, err
 	}
 	{{end}}
-	return {{.DatabaseName}}DB{pool: pool,
+	return {{.DatabaseName}}DB{Pool: pool,
 		{{if .IncludeLogger}}
 		logger:          logger,
 		{{end}}
@@ -94,7 +94,7 @@ func New{{.DatabaseName}}(ctx context.Context, provider {{.DatabaseName}}Connect
 }
 
 func (db *{{.DatabaseName}}DB) Close() error {
-	db.pool.Close()
+	db.Pool.Close()
 	return nil
 }
 
@@ -108,7 +108,7 @@ func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args 
 	start := time.Now()
 	db.logger.Info("Executing QueryRow", zap.String("query", query))
 	{{end}}
-	row := db.pool.QueryRow(ctx, ReplaceQuestions(query), args...)
+	row := db.Pool.QueryRow(ctx, ReplaceQuestions(query), args...)
 	{{if .IncludeLogger}}
 	duration := time.Since(start).Seconds()
 	db.logger.Info("QueryRow succeeded", zap.Float64("duration", duration))
@@ -129,7 +129,7 @@ func (db *{{.DatabaseName}}DB) Query(ctx context.Context, query string, args ...
     start := time.Now()
     db.logger.Info("Executing Query", zap.String("query", query))
 	{{end}}
-	rows, err := db.pool.Query(ctx, ReplaceQuestions(query), args...)
+	rows, err := db.Pool.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		{{if .IncludeTelemetry}}
 		span.SetStatus(codes.Error, err.Error())
@@ -159,7 +159,7 @@ func (db *{{.DatabaseName}}DB) Exec(ctx context.Context, query string, args ...a
 	start := time.Now()
     db.logger.Info("Executing Exec", zap.String("query", query))
 	{{end}}
-    r, err := db.pool.Exec(ctx, ReplaceQuestions(query), args...)
+    r, err := db.Pool.Exec(ctx, ReplaceQuestions(query), args...)
     if err != nil {
         {{if .IncludeTelemetry}}
 		span.SetStatus(codes.Error, err.Error())
@@ -181,7 +181,7 @@ func (db *{{.DatabaseName}}DB) Exec(ctx context.Context, query string, args ...a
 }
 
 func (db *{{.DatabaseName}}DB) BeginTransaction(ctx context.Context) (Tx, error) {
-	tx, err := db.pool.Begin(ctx)
+	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
