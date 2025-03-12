@@ -26,35 +26,63 @@ func New(db common.Querier) *Repository {
 type {{.MessageName}}Filter struct {
 {{- range .Fields }}
   {{.Name | lower}} *{{.Type}}
+  not{{.Name | lower}} *{{.Type}}
+  gt{{.Name | lower}} *{{.Type}}
+  lt{{.Name | lower}} *{{.Type}}
+  gteq{{.Name | lower}} *{{.Type}}
+  lteq{{.Name | lower}} *{{.Type}}
   {{.Name | lower}}s []{{.Type}}
 {{- end }}
 }
 
-func NewFilter() *{{.MessageName}}Filter{
-	return &{{.MessageName}}Filter{}
+type FilterOpt func(f *{{.MessageName}}Filter)
+
+func NewFilter(opts ...FilterOpt) {{.MessageName}}Filter{
+	f := &{{.MessageName}}Filter{}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return *f
 }
 
 
 {{- range .Fields }}
-func (f *{{$.MessageName}}Filter) {{.Name}} ({{.Name | lower}} {{.Type}})  *{{$.MessageName}}Filter {
-  f.{{.Name | lower}} = &{{.Name | lower}}
-  return f
+func With{{.Name}}({{.Name | lower}} {{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.{{.Name | lower}} = &{{.Name | lower}}
+	}
 }
-
-func (f *{{$.MessageName}}Filter) AddOneTo{{.Name}}s ({{.Name | lower}} {{.Type}})  *{{$.MessageName}}Filter {
-  f.{{.Name | lower}}s = append(f.{{.Name | lower}}s, {{.Name | lower}})
-  return f
+func With{{.Name}}Not({{.Name | lower}} {{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.not{{.Name | lower}} = &{{.Name | lower}}
+	}
 }
-
-func (f *{{$.MessageName}}Filter) {{.Name}}s ({{.Name | lower}}s []{{.Type}})  *{{$.MessageName}}Filter {
-  f.{{.Name | lower}}s =  {{.Name | lower}}s
-  return f
+func With{{.Name}}MoreThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.gt{{.Name | lower}} = &{{.Name | lower}}
+	}
+}
+func With{{.Name}}LowerThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.lt{{.Name | lower}} = &{{.Name | lower}}
+	}
+}
+func With{{.Name}}MoreOrEqualThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.gteq{{.Name | lower}} = &{{.Name | lower}}
+	}
+}
+func With{{.Name}}LowerOrEqualThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.lteq{{.Name | lower}} = &{{.Name | lower}}
+	}
+}
+func With{{.Name}}s ({{.Name | lower}}s ...{{.Type}})  FilterOpt {
+	return func(f *{{$.MessageName}}Filter) {
+		f.{{.Name | lower}}s = append(f.{{.Name | lower}}s, {{.Name | lower}}s...)
+	}
 }
 {{- end }}
-
-func (f *{{$.MessageName}}Filter) Build()  {{$.MessageName}}Filter {
-   return *f
-}
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
@@ -62,6 +90,21 @@ func ApplyWhere[B interface {
   {{- range .Fields }}
 	if f.{{.Name | lower}} != nil {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+    }
+	if f.not{{.Name | lower}} != nil {
+      b = b.Where(sq.NotEq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+    }
+	if f.lt{{.Name | lower}} != nil {
+      b = b.Where(sq.Lt{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+    }
+	if f.gt{{.Name | lower}} != nil {
+      b = b.Where(sq.Gt{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+    }
+	if f.lteq{{.Name | lower}} != nil {
+      b = b.Where(sq.LtOrEq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+    }
+	if f.gteq{{.Name | lower}} != nil {
+      b = b.Where(sq.GtOrEq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
     }
 	if f.{{.Name | lower}}s != nil {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: f.{{.Name | lower}}s})
