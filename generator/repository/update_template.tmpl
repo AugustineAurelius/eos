@@ -24,7 +24,7 @@ import (
 
 {{if .WithTx}}
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u {{.MessageName}}Update) error {
+func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u Update) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return update(ctx, tx, id, u)
     } else {
@@ -32,7 +32,7 @@ func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u {{.MessageName
     }
 }
 
-func update(ctx context.Context, run common.Querier, id uuid.UUID, u {{.MessageName}}Update) error {
+func update(ctx context.Context, run common.Querier, id uuid.UUID, u Update) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question).Where(sq.Eq{Column{{.MessageName}}ID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
@@ -43,7 +43,7 @@ func update(ctx context.Context, run common.Querier, id uuid.UUID, u {{.MessageN
 }
 
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) UpdateMany(ctx context.Context,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
+func (r *Repository) UpdateMany(ctx context.Context,  f Filter, u  Update) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return updateMany(ctx, tx, f, u)
     } else {
@@ -51,7 +51,7 @@ func (r *Repository) UpdateMany(ctx context.Context,  f {{.MessageName}}Filter, 
     }
 }
 
-func updateMany(ctx context.Context, run common.Querier,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
+func updateMany(ctx context.Context, run common.Querier,  f Filter, u  Update) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
@@ -66,7 +66,7 @@ func updateMany(ctx context.Context, run common.Querier,  f {{.MessageName}}Filt
 }
 {{else}}
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u  {{.MessageName}}Update) error {
+func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u Update) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question).Where(sq.Eq{Column{{.MessageName}}ID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
@@ -77,7 +77,7 @@ func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u  {{.MessageNam
 }
 
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) UpdateMany(ctx context.Context,  f {{.MessageName}}Filter, u  {{.MessageName}}Update) error {
+func (r *Repository) UpdateMany(ctx context.Context,  f Filter, u  Update) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)

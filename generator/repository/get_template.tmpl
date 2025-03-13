@@ -59,7 +59,7 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*{{.MessageName
 }
 
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) GetMany(ctx context.Context, f {{.MessageName}}Filter) ({{.MessageName}}s, error) {
+func (r *Repository) GetMany(ctx context.Context, f Filter) ({{.MessageName}}s, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return getMany(ctx, tx, f)
     } else {
@@ -67,7 +67,7 @@ func (r *Repository) GetMany(ctx context.Context, f {{.MessageName}}Filter) ({{.
     }
 }
 
-func getMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) ({{.MessageName}}s, error) {
+func getMany(ctx context.Context, run common.Querier, f Filter) ({{.MessageName}}s, error) {
 	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
@@ -133,7 +133,7 @@ func (r *Repository) Get(ctx context.Context,  id uuid.UUID) (*{{.MessageName}},
 
 
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) GetMany(ctx context.Context, f {{.MessageName}}Filter) ({{.MessageName}}s, error) {
+func (r *Repository) GetMany(ctx context.Context, f Filter) ({{.MessageName}}s, error) {
 b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},

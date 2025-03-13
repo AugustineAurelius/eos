@@ -16,7 +16,7 @@ import (
 
 
 // UpdateUser updates an existing User in the database.
-func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u UserUpdate) error {
+func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u Update) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return update(ctx, tx, id, u)
     } else {
@@ -24,7 +24,7 @@ func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u UserUpdate) er
     }
 }
 
-func update(ctx context.Context, run common.Querier, id uuid.UUID, u UserUpdate) error {
+func update(ctx context.Context, run common.Querier, id uuid.UUID, u Update) error {
     b:= sq.Update(TableUser).PlaceholderFormat(sq.Question).Where(sq.Eq{ColumnUserID: id})
     b = ApplySet(b, u)
 	query, args := b.MustSql()
@@ -35,7 +35,7 @@ func update(ctx context.Context, run common.Querier, id uuid.UUID, u UserUpdate)
 }
 
 // UpdateUser updates an existing User in the database.
-func (r *Repository) UpdateMany(ctx context.Context,  f UserFilter, u  UserUpdate) error {
+func (r *Repository) UpdateMany(ctx context.Context,  f Filter, u  Update) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return updateMany(ctx, tx, f, u)
     } else {
@@ -43,7 +43,7 @@ func (r *Repository) UpdateMany(ctx context.Context,  f UserFilter, u  UserUpdat
     }
 }
 
-func updateMany(ctx context.Context, run common.Querier,  f UserFilter, u  UserUpdate) error {
+func updateMany(ctx context.Context, run common.Querier,  f Filter, u  Update) error {
     b:= sq.Update(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)

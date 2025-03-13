@@ -34,7 +34,7 @@ func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 }
 
 // DeleteManyUser retrieves a User by filter.
-func (r *Repository) DeleteMany(ctx context.Context, f UserFilter) error {
+func (r *Repository) DeleteMany(ctx context.Context, f Filter) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return deleteMany(ctx, tx, f)
     } else {
@@ -42,7 +42,7 @@ func (r *Repository) DeleteMany(ctx context.Context, f UserFilter) error {
     }
 }
 
-func deleteMany(ctx context.Context, run common.Querier, f UserFilter) error {
+func deleteMany(ctx context.Context, run common.Querier, f Filter) error {
 	b := sq.Delete(TableUser).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)

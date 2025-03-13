@@ -42,7 +42,7 @@ func delete(ctx context.Context, run common.Querier,id uuid.UUID) error {
 }
 
 // DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) DeleteMany(ctx context.Context, f {{.MessageName}}Filter) error {
+func (r *Repository) DeleteMany(ctx context.Context, f Filter) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return deleteMany(ctx, tx, f)
     } else {
@@ -50,7 +50,7 @@ func (r *Repository) DeleteMany(ctx context.Context, f {{.MessageName}}Filter) e
     }
 }
 
-func deleteMany(ctx context.Context, run common.Querier, f {{.MessageName}}Filter) error {
+func deleteMany(ctx context.Context, run common.Querier, f Filter) error {
 	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)
@@ -78,7 +78,7 @@ func (r *Repository) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 // DeleteMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) DeleteMany(ctx context.Context, f {{.MessageName}}Filter) error {
+func (r *Repository) DeleteMany(ctx context.Context, f Filter) error {
 	b := sq.Delete(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	b = ApplyWhere(b, f)

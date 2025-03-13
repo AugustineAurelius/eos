@@ -220,7 +220,7 @@ func Test_WithDatabases(t *testing.T) {
 				limit := 200
 				Oreder := "name DESC"
 				MaxRows := 500
-				cur := userRepo.NewCursor(ctx, repository.UserFilter{}, repository.BuilderParams{
+				cur := userRepo.NewCursor(ctx, repository.Filter{}, repository.BuilderParams{
 					Limit:   &limit,
 					OrderBy: &Oreder,
 					MaxRows: &MaxRows,

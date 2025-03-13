@@ -34,7 +34,7 @@ type Cursor struct {
 	closed    bool 
 }
 
-func (r *Repository) NewCursor(ctx context.Context, f UserFilter, params BuilderParams) *Cursor {
+func (r *Repository) NewCursor(ctx context.Context, f Filter, params BuilderParams) *Cursor {
 	limit := 10
 	if params.Limit != nil {
 		limit = *params.Limit

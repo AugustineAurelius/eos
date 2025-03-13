@@ -23,7 +23,7 @@ func New(db common.Querier) *Repository {
 }
 
 // {{.MessageName}}Filer represents the {{.MessageName}} filter.
-type {{.MessageName}}Filter struct {
+type Filter struct {
 {{- range .Fields }}
   {{.Name | lower}} *{{.Type}}
   not{{.Name | lower}} *{{.Type}}
@@ -35,10 +35,10 @@ type {{.MessageName}}Filter struct {
 {{- end }}
 }
 
-type FilterOpt func(f *{{.MessageName}}Filter)
+type FilterOpt func(f *Filter)
 
-func NewFilter(opts ...FilterOpt) {{.MessageName}}Filter{
-	f := &{{.MessageName}}Filter{}
+func NewFilter(opts ...FilterOpt) Filter{
+	f := &Filter{}
 	for _, opt := range opts {
 		opt(f)
 	}
@@ -48,37 +48,37 @@ func NewFilter(opts ...FilterOpt) {{.MessageName}}Filter{
 
 {{- range .Fields }}
 func With{{.Name}}({{.Name | lower}} {{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.{{.Name | lower}} = &{{.Name | lower}}
 	}
 }
 func With{{.Name}}Not({{.Name | lower}} {{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.not{{.Name | lower}} = &{{.Name | lower}}
 	}
 }
 func With{{.Name}}MoreThen({{.Name | lower}} {{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.gt{{.Name | lower}} = &{{.Name | lower}}
 	}
 }
 func With{{.Name}}LowerThen({{.Name | lower}} {{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.lt{{.Name | lower}} = &{{.Name | lower}}
 	}
 }
 func With{{.Name}}MoreOrEqualThen({{.Name | lower}} {{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.gteq{{.Name | lower}} = &{{.Name | lower}}
 	}
 }
 func With{{.Name}}LowerOrEqualThen({{.Name | lower}} {{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.lteq{{.Name | lower}} = &{{.Name | lower}}
 	}
 }
 func With{{.Name}}s ({{.Name | lower}}s ...{{.Type}})  FilterOpt {
-	return func(f *{{$.MessageName}}Filter) {
+	return func(f *Filter) {
 		f.{{.Name | lower}}s = append(f.{{.Name | lower}}s, {{.Name | lower}}s...)
 	}
 }
@@ -86,7 +86,7 @@ func With{{.Name}}s ({{.Name | lower}}s ...{{.Type}})  FilterOpt {
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
-}](b B,f {{$.MessageName}}Filter) B {
+}](b B,f Filter) B {
   {{- range .Fields }}
 	if f.{{.Name | lower}} != nil {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
@@ -113,31 +113,34 @@ func ApplyWhere[B interface {
   return b
 }
 
+type UpdateOpt func(u *Update)
+
 // {{.MessageName}}Update represents the {{.MessageName}} update struct.
-type {{.MessageName}}Update struct {
+type Update struct {
 {{- range .Fields }}
   {{.Name | lower}} *{{.Type}}
 {{- end }}
 }
 
-func NewUpdate() *{{.MessageName}}Update{
-	return &{{.MessageName}}Update{}
+func NewUpdate(opts ...UpdateOpt) Update{
+	u := &Update{}
+	for _, opt := range opts {
+		opt(u)
+	}
+	return *u
 }
 
 {{- range .Fields }}
-func (u *{{$.MessageName}}Update) {{.Name}} ({{.Name | lower}} {{.Type}})  *{{$.MessageName}}Update {
-  u.{{.Name | lower}} = &{{.Name | lower}}
-  return u
+func WithUpdate{{.Name}}({{.Name | lower}} {{.Type}})  UpdateOpt {
+	return func(f *Update) {
+		f.{{.Name | lower}} = &{{.Name | lower}}
+	}
 }
 {{- end }}
 
-func (u *{{$.MessageName}}Update) Build()  {{$.MessageName}}Update {
-  return *u
-}
-
 func ApplySet[B interface {
     Set(column string, value interface{}) B
-}] (b B, f {{$.MessageName}}Update) B {
+}] (b B, f Update) B {
   {{- range .Fields }}
 	if f.{{.Name | lower}} != nil {
       b = b.Set(Column{{$.MessageName}}{{.Name}}, *f.{{.Name | lower}})
