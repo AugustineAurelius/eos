@@ -36,6 +36,14 @@ import (
 
 var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
 
+type postgresProvider struct {
+	url string
+}
+
+func (p postgresProvider) URL() string {
+	return p.url
+}
+
 func Test_WithDatabases(t *testing.T) {
 	// ctx := context.Background()
 	// conn, err := initConn()
@@ -99,7 +107,7 @@ func Test_WithDatabases(t *testing.T) {
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, common.PostgresConnectionProvider{connStr}, logger)
+				db, err := common.NewPostgres(ctx, postgresProvider{url: connStr}, logger)
 
 				assert.NoError(t, err)
 

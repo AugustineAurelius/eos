@@ -17,13 +17,8 @@ import (
 
 
 
-
-type PostgresConnectionProvider struct {
-	URL string
-}
-
-func (p *PostgresConnectionProvider) GetConnectionURL() string {
-	return p.URL
+type PostgresConnectionProvider interface {
+	URL() string
 }
 
 type PostgresDB struct {
@@ -42,7 +37,7 @@ func NewPostgres(ctx context.Context, provider PostgresConnectionProvider,
 	
 	
 ) (PostgresDB, error) {
-	url := provider.GetConnectionURL()
+	url := provider.URL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		return PostgresDB{}, err

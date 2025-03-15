@@ -23,13 +23,8 @@ import (
 
 
 
-
-type {{.DatabaseName}}ConnectionProvider struct {
-	URL string
-}
-
-func (p *{{.DatabaseName}}ConnectionProvider) GetConnectionURL() string {
-	return p.URL
+type {{.DatabaseName}}ConnectionProvider interface {
+	URL() string
 }
 
 type {{.DatabaseName}}DB struct {
@@ -58,7 +53,7 @@ func New{{.DatabaseName}}(ctx context.Context, provider {{.DatabaseName}}Connect
 	metrics metricProvider,
 	{{end}}
 ) ({{.DatabaseName}}DB, error) {
-	url := provider.GetConnectionURL()
+	url := provider.URL()
 	pool, err := pgxpool.New(ctx, url)
 	if err != nil {
 		return {{.DatabaseName}}DB{}, err
