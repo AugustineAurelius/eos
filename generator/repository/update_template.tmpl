@@ -22,7 +22,7 @@ import (
 
 {{if .WithTx}}
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
+func (r *CommandRepository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return update(ctx, tx, u, opts...)
     } else {
@@ -47,7 +47,7 @@ func update(ctx context.Context, run common.Querier, u Update, opts ...FilterOpt
 
 {{else}}
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
+func (r *CommandRepository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
 	f := &Filter{}

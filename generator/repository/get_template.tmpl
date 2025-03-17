@@ -20,7 +20,7 @@ import (
 {{end}}
 {{if .WithTx}}
 
-func (r *Repository) Get(ctx context.Context,  opts ...FilterOpt) (*{{.MessageName}}, error) {
+func (r *CommandRepository) Get(ctx context.Context,  opts ...FilterOpt) (*{{.MessageName}}, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return get(ctx, tx, opts...)
     } else {
@@ -69,7 +69,7 @@ func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*{{.Messag
 
 }
 
-func (r *Repository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
+func (r *CommandRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return getMany(ctx, tx, opts...)
     } else {
@@ -131,7 +131,7 @@ func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) ({{.Me
 
 {{else}}
 // Get{{.MessageName}} retrieves a {{.MessageName}} by ID.
-func (r *Repository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error) {
+func (r *CommandRepository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error) {
 	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
@@ -189,7 +189,7 @@ func (r *QueryRepository) Get(ctx context.Context, opts ...FilterOpt) (*{{.Messa
 }
 
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
+func (r *CommandRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
 b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},

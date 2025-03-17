@@ -9,8 +9,7 @@ import (
 )
 
 
-// Command
-type Repository struct{
+type CommandRepository struct{
 	db common.Querier
 }
 
@@ -18,8 +17,8 @@ type QueryRepository struct{
 	db common.Querier
 }
 
-func NewCommand(db common.Querier) *Repository {
-	return &Repository{
+func NewCommand(db common.Querier) *CommandRepository {
+	return &CommandRepository{
 		db: db,
 	}
 }

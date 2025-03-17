@@ -22,7 +22,7 @@ import (
 
 {{if .WithTx}}
 // Create{{.MessageName}} inserts a new {{.MessageName}} into the database.
-func (r *Repository) Create (ctx context.Context, {{.MessageName | lower}} *{{.MessageName}}) error {
+func (r *CommandRepository) Create (ctx context.Context, {{.MessageName | lower}} *{{.MessageName}}) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return create(ctx, tx, {{.MessageName | lower}})
     } else {
@@ -44,7 +44,7 @@ func create(ctx context.Context, run common.Querier, {{.MessageName | lower}} *{
 }
 {{else}}
 // Create{{.MessageName}} inserts a new {{.MessageName}} into the database.
-func (r *Repository) Create(ctx context.Context,  {{.MessageName | lower}} *{{.MessageName}}) error {
+func (r *CommandRepository) Create(ctx context.Context,  {{.MessageName | lower}} *{{.MessageName}}) error {
 	model := Converter(*{{.MessageName | lower}})
 	query, args := sq.Insert(Table{{.MessageName}}).
 		Columns({{.Fields | columns}}).

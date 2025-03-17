@@ -13,7 +13,7 @@ import (
 
 
 
-func (r *Repository) Get(ctx context.Context,  opts ...FilterOpt) (*User, error) {
+func (r *CommandRepository) Get(ctx context.Context,  opts ...FilterOpt) (*User, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return get(ctx, tx, opts...)
     } else {
@@ -62,7 +62,7 @@ func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*User, err
 
 }
 
-func (r *Repository) GetMany(ctx context.Context, opts ...FilterOpt) (Users, error) {
+func (r *CommandRepository) GetMany(ctx context.Context, opts ...FilterOpt) (Users, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return getMany(ctx, tx, opts...)
     } else {

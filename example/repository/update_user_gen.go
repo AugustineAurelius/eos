@@ -15,7 +15,7 @@ import (
 
 
 // UpdateUser updates an existing User in the database.
-func (r *Repository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
+func (r *CommandRepository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
 		return update(ctx, tx, u, opts...)
     } else {
