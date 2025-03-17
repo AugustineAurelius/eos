@@ -47,7 +47,7 @@ func update(ctx context.Context, run common.Querier, u Update, opts ...FilterOpt
 
 {{else}}
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
-func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u Update) error {
+func (r *Repository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
     b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question).Where(sq.Eq{Column{{.MessageName}}ID: id})
 
 	f := &Filter{}

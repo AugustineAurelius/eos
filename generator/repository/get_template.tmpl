@@ -137,8 +137,7 @@ func (r *Repository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageNam
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).
-	From(Table{{.MessageName}}).
-	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question)
+	From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -166,8 +165,7 @@ func (r *QueryRepository) Get(ctx context.Context, opts ...FilterOpt) (*{{.Messa
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).
-	From(Table{{.MessageName}}).
-	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question)
+	From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -203,7 +201,7 @@ b := sq.Select(
 		opts[i](f)
 	}
 	b = ApplyWhere(b, *f)
-
+	query, args := 	b.MustSql()	
     var {{.MessageName | lower}}s {{.MessageName}}s
 
 	rows, err := r.db.Query(ctx, query, args...)
