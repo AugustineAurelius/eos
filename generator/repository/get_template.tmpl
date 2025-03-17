@@ -244,7 +244,7 @@ b := sq.Select(
 		opts[i](f)
 	}
 	b = ApplyWhere(b, *f)
-
+	query, args := 	b.MustSql()	
     var {{.MessageName | lower}}s {{.MessageName}}s
 
 	rows, err := r.db.Query(ctx, query, args...)
