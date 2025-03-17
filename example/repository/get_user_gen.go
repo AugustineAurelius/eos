@@ -6,32 +6,44 @@ import (
 	"context"
 	"fmt"
 	txrunner "github.com/AugustineAurelius/eos/example/tx_runner"
-  common "github.com/AugustineAurelius/eos/example/common"
+    common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 )
 
 
 
-// GetUser retrieves a User by ID.
-func (r *Repository) Get(ctx context.Context,  id uuid.UUID) (*User, error) {
+func (r *Repository) Get(ctx context.Context,  opts ...FilterOpt) (*User, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
-		return get(ctx, tx, id)
+		return get(ctx, tx, opts...)
     } else {
-		return get(ctx, r.db, id)
+		return get(ctx, r.db, opts...)
+    }
+}
+
+func (r *QueryRepository) Get(ctx context.Context,  opts ...FilterOpt) (*User, error) {
+	if tx, ok := txrunner.FromContex(ctx); ok {
+		return get(ctx, tx, opts...)
+    } else {
+		return get(ctx, r.db, opts...)
     }
 }
 
 
-func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
-	query, args := sq.Select(
+func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*User, error){
+	b := sq.Select(
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-	).
-	From(TableUser).
-	Where(sq.Eq{ColumnUserID: id}).PlaceholderFormat(sq.Question).MustSql()
+	).From(TableUser).PlaceholderFormat(sq.Question)
+
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+    query, args := 	b.MustSql()
 
 	var userModel UserModel
 	err := run.QueryRow(ctx, query, args...).Scan(
@@ -50,23 +62,34 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*User, error){
 
 }
 
-// GetManyUser retrieves a User by filter.
-func (r *Repository) GetMany(ctx context.Context, f Filter) (Users, error) {
+func (r *Repository) GetMany(ctx context.Context, opts ...FilterOpt) (Users, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
-		return getMany(ctx, tx, f)
+		return getMany(ctx, tx, opts...)
     } else {
-		return getMany(ctx, r.db, f)
+		return getMany(ctx, r.db, opts...)
     }
 }
 
-func getMany(ctx context.Context, run common.Querier, f Filter) (Users, error) {
+func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) (Users, error) {
+	if tx, ok := txrunner.FromContex(ctx); ok {
+		return getMany(ctx, tx, opts...)
+    } else {
+		return getMany(ctx, r.db, opts...)
+    }
+}
+
+func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) (Users, error) {
 	b := sq.Select(
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
-	b = ApplyWhere(b, f)
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
 
     query, args := 	b.MustSql()
 

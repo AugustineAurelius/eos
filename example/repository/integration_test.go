@@ -189,7 +189,7 @@ func Test_WithDatabases(t *testing.T) {
 
 			db := c.Provide()
 
-			userRepo := repository.New(db)
+			userRepo := repository.NewCommand(db)
 
 			id := uuid.New()
 			email := "email"
@@ -198,14 +198,11 @@ func Test_WithDatabases(t *testing.T) {
 			err := userRepo.Create(ctx, testUser)
 			assert.NoError(t, err)
 
-			user, err := userRepo.Get(ctx, id)
+			user, err := userRepo.Get(ctx, repository.WithID(id))
 			assert.NoError(t, err)
 			assert.Equal(t, testUser, user)
 
-			f := repository.NewFilter(
-				repository.WithID(id),
-			)
-			users, err := userRepo.GetMany(ctx, f)
+			users, err := userRepo.GetMany(ctx, repository.WithID(id))
 			assert.NoError(t, err)
 			assert.Equal(t, repository.Users{*testUser}, users)
 
@@ -215,7 +212,7 @@ func Test_WithDatabases(t *testing.T) {
 				assert.NoError(t, err)
 			}
 
-			users, err = userRepo.GetMany(ctx, repository.NewFilter())
+			users, err = userRepo.GetMany(ctx)
 			assert.NoError(t, err)
 
 			filtered := users.FilterFunc(func(i repository.User) bool {

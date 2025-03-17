@@ -9,23 +9,27 @@ import (
   common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 )
 
 
 
 
 // UpdateUser updates an existing User in the database.
-func (r *Repository) Update(ctx context.Context,  id uuid.UUID, u Update) error {
+func (r *Repository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
 	if tx, ok := txrunner.FromContex(ctx); ok {
-		return update(ctx, tx, id, u)
+		return update(ctx, tx, u, opts...)
     } else {
-		return update(ctx, r.db, id, u)
+		return update(ctx, r.db, u, opts...)
     }
 }
 
-func update(ctx context.Context, run common.Querier, id uuid.UUID, u Update) error {
-    b:= sq.Update(TableUser).PlaceholderFormat(sq.Question).Where(sq.Eq{ColumnUserID: id})
+func update(ctx context.Context, run common.Querier, u Update, opts ...FilterOpt) error {
+    b:= sq.Update(TableUser).PlaceholderFormat(sq.Question)
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
     b = ApplySet(b, u)
 	query, args := b.MustSql()
 	if _, err := run.Exec(ctx, query, args...); err != nil {
@@ -34,28 +38,6 @@ func update(ctx context.Context, run common.Querier, id uuid.UUID, u Update) err
 	return nil 
 }
 
-// UpdateUser updates an existing User in the database.
-func (r *Repository) UpdateMany(ctx context.Context,  f Filter, u  Update) error {
-	if tx, ok := txrunner.FromContex(ctx); ok {
-		return updateMany(ctx, tx, f, u)
-    } else {
-		return updateMany(ctx, r.db, f, u)
-    }
-}
-
-func updateMany(ctx context.Context, run common.Querier,  f Filter, u  Update) error {
-    b:= sq.Update(TableUser).PlaceholderFormat(sq.Question)
-
-	b = ApplyWhere(b, f)
-
-    b = ApplySet(b, u)
-	
-	query, args := b.MustSql()
-	if _, err := run.Exec(ctx, query, args...); err != nil {
-		return fmt.Errorf("failed to exec update query %s with args %v error = %w", query, args, err)
-	}
-	return nil 
-}
 
 
 

@@ -6,10 +6,9 @@ import (
 	"context"
 	"fmt"
 	txrunner "{{.TxRunnerPath}}"
-  common "{{.CommonPath}}"
+    common "{{.CommonPath}}"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 )
 {{else}}
 import (
@@ -17,29 +16,41 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 )
 {{end}}
 {{if .WithTx}}
 
-// Get{{.MessageName}} retrieves a {{.MessageName}} by ID.
-func (r *Repository) Get(ctx context.Context,  id uuid.UUID) (*{{.MessageName}}, error) {
+func (r *Repository) Get(ctx context.Context,  opts ...FilterOpt) (*{{.MessageName}}, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
-		return get(ctx, tx, id)
+		return get(ctx, tx, opts...)
     } else {
-		return get(ctx, r.db, id)
+		return get(ctx, r.db, opts...)
+    }
+}
+
+func (r *QueryRepository) Get(ctx context.Context,  opts ...FilterOpt) (*{{.MessageName}}, error) {
+	if tx, ok := txrunner.FromContex(ctx); ok {
+		return get(ctx, tx, opts...)
+    } else {
+		return get(ctx, r.db, opts...)
     }
 }
 
 
-func get(ctx context.Context, run common.Querier, id uuid.UUID) (*{{.MessageName}}, error){
-	query, args := sq.Select(
+func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*{{.MessageName}}, error){
+	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
-	).
-	From(Table{{.MessageName}}).
-	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question).MustSql()
+	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+    query, args := 	b.MustSql()
 
 	var {{.MessageName | lower}}Model {{.MessageName}}Model
 	err := run.QueryRow(ctx, query, args...).Scan(
@@ -58,23 +69,34 @@ func get(ctx context.Context, run common.Querier, id uuid.UUID) (*{{.MessageName
 
 }
 
-// GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) GetMany(ctx context.Context, f Filter) ({{.MessageName}}s, error) {
+func (r *Repository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
 	if tx, ok := txrunner.FromContex(ctx); ok {
-		return getMany(ctx, tx, f)
+		return getMany(ctx, tx, opts...)
     } else {
-		return getMany(ctx, r.db, f)
+		return getMany(ctx, r.db, opts...)
     }
 }
 
-func getMany(ctx context.Context, run common.Querier, f Filter) ({{.MessageName}}s, error) {
+func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
+	if tx, ok := txrunner.FromContex(ctx); ok {
+		return getMany(ctx, tx, opts...)
+    } else {
+		return getMany(ctx, r.db, opts...)
+    }
+}
+
+func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) ({{.MessageName}}s, error) {
 	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
-	b = ApplyWhere(b, f)
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
 
     query, args := 	b.MustSql()
 
@@ -109,14 +131,51 @@ func getMany(ctx context.Context, run common.Querier, f Filter) ({{.MessageName}
 
 {{else}}
 // Get{{.MessageName}} retrieves a {{.MessageName}} by ID.
-func (r *Repository) Get(ctx context.Context,  id uuid.UUID) (*{{.MessageName}}, error) {
-	query, args := sq.Select(
+func (r *Repository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error) {
+	b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).
 	From(Table{{.MessageName}}).
-	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question).MustSql()
+	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question)
+	
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+    query, args := 	b.MustSql()
+
+	var {{.MessageName | lower}} {{.MessageName}}
+	err := r.db.QueryRow(ctx, query, args...).Scan(
+		{{- range .Fields }}
+		&{{$.MessageName | lower}}.{{.Name}},
+		{{- end }}
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
+	}
+
+	return &{{.MessageName | lower}}, err
+}
+func (r *QueryRepository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error) {
+	b := sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	).
+	From(Table{{.MessageName}}).
+	Where(sq.Eq{Column{{.MessageName}}ID: id}).PlaceholderFormat(sq.Question)
+	
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+    query, args := 	b.MustSql()
 
 	var {{.MessageName | lower}} {{.MessageName}}
 	err := r.db.QueryRow(ctx, query, args...).Scan(
@@ -131,18 +190,62 @@ func (r *Repository) Get(ctx context.Context,  id uuid.UUID) (*{{.MessageName}},
 	return &{{.MessageName | lower}}, err
 }
 
-
 // GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *Repository) GetMany(ctx context.Context, f Filter) ({{.MessageName}}s, error) {
+func (r *Repository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
 b := sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 
-	b = ApplyWhere(b, f)
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
 
-    query, args := 	b.MustSql()
+    var {{.MessageName | lower}}s {{.MessageName}}s
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying database: %w", err)
+	}
+	defer rows.Close()
+
+
+	var {{.MessageName | lower}}Model {{.MessageName}}Model
+	for rows.Next() {
+		err := rows.Scan(
+		{{- range .Fields }}
+			&{{$.MessageName | lower}}Model.{{.Name}},
+		{{- end }}
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %w", err)
+		}
+		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, ReverseConverter({{.MessageName | lower}}Model))
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", rows.Err())
+	}
+
+	return {{.MessageName | lower}}s, err
+}
+
+// GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
+func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
+b := sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
 
     var {{.MessageName | lower}}s {{.MessageName}}s
 
