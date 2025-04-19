@@ -51,20 +51,6 @@ type Filter struct {
   gteqemail **string
   lteqemail **string
   emails []*string
-  booler *bool
-  notbooler *bool
-  gtbooler *bool
-  ltbooler *bool
-  gteqbooler *bool
-  lteqbooler *bool
-  boolers []bool
-  balance *float64
-  notbalance *float64
-  gtbalance *float64
-  ltbalance *float64
-  gteqbalance *float64
-  lteqbalance *float64
-  balances []float64
 }
 
 type FilterOpt func(f *Filter)
@@ -181,76 +167,6 @@ func WithEmails (emails ...*string)  FilterOpt {
 		f.emails = append(f.emails, emails...)
 	}
 }
-func WithBooler(booler bool)  FilterOpt {
-	return func(f *Filter) {
-		f.booler = &booler
-	}
-}
-func WithBoolerNot(booler bool)  FilterOpt {
-	return func(f *Filter) {
-		f.notbooler = &booler
-	}
-}
-func WithBoolerMoreThen(booler bool)  FilterOpt {
-	return func(f *Filter) {
-		f.gtbooler = &booler
-	}
-}
-func WithBoolerLowerThen(booler bool)  FilterOpt {
-	return func(f *Filter) {
-		f.ltbooler = &booler
-	}
-}
-func WithBoolerMoreOrEqualThen(booler bool)  FilterOpt {
-	return func(f *Filter) {
-		f.gteqbooler = &booler
-	}
-}
-func WithBoolerLowerOrEqualThen(booler bool)  FilterOpt {
-	return func(f *Filter) {
-		f.lteqbooler = &booler
-	}
-}
-func WithBoolers (boolers ...bool)  FilterOpt {
-	return func(f *Filter) {
-		f.boolers = append(f.boolers, boolers...)
-	}
-}
-func WithBalance(balance float64)  FilterOpt {
-	return func(f *Filter) {
-		f.balance = &balance
-	}
-}
-func WithBalanceNot(balance float64)  FilterOpt {
-	return func(f *Filter) {
-		f.notbalance = &balance
-	}
-}
-func WithBalanceMoreThen(balance float64)  FilterOpt {
-	return func(f *Filter) {
-		f.gtbalance = &balance
-	}
-}
-func WithBalanceLowerThen(balance float64)  FilterOpt {
-	return func(f *Filter) {
-		f.ltbalance = &balance
-	}
-}
-func WithBalanceMoreOrEqualThen(balance float64)  FilterOpt {
-	return func(f *Filter) {
-		f.gteqbalance = &balance
-	}
-}
-func WithBalanceLowerOrEqualThen(balance float64)  FilterOpt {
-	return func(f *Filter) {
-		f.lteqbalance = &balance
-	}
-}
-func WithBalances (balances ...float64)  FilterOpt {
-	return func(f *Filter) {
-		f.balances = append(f.balances, balances...)
-	}
-}
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
@@ -318,48 +234,6 @@ func ApplyWhere[B interface {
 	if f.emails != nil {
       b = b.Where(sq.Eq{ColumnUserEmail: f.emails})
     }
-	if f.booler != nil {
-      b = b.Where(sq.Eq{ColumnUserBooler: *f.booler})
-    }
-	if f.notbooler != nil {
-      b = b.Where(sq.NotEq{ColumnUserBooler: *f.notbooler})
-    }
-	if f.ltbooler != nil {
-      b = b.Where(sq.Lt{ColumnUserBooler: *f.ltbooler})
-    }
-	if f.gtbooler != nil {
-      b = b.Where(sq.Gt{ColumnUserBooler: *f.gtbooler})
-    }
-	if f.lteqbooler != nil {
-      b = b.Where(sq.LtOrEq{ColumnUserBooler: *f.lteqbooler})
-    }
-	if f.gteqbooler != nil {
-      b = b.Where(sq.GtOrEq{ColumnUserBooler: *f.gteqbooler})
-    }
-	if f.boolers != nil {
-      b = b.Where(sq.Eq{ColumnUserBooler: f.boolers})
-    }
-	if f.balance != nil {
-      b = b.Where(sq.Eq{ColumnUserBalance: *f.balance})
-    }
-	if f.notbalance != nil {
-      b = b.Where(sq.NotEq{ColumnUserBalance: *f.notbalance})
-    }
-	if f.ltbalance != nil {
-      b = b.Where(sq.Lt{ColumnUserBalance: *f.ltbalance})
-    }
-	if f.gtbalance != nil {
-      b = b.Where(sq.Gt{ColumnUserBalance: *f.gtbalance})
-    }
-	if f.lteqbalance != nil {
-      b = b.Where(sq.LtOrEq{ColumnUserBalance: *f.lteqbalance})
-    }
-	if f.gteqbalance != nil {
-      b = b.Where(sq.GtOrEq{ColumnUserBalance: *f.gteqbalance})
-    }
-	if f.balances != nil {
-      b = b.Where(sq.Eq{ColumnUserBalance: f.balances})
-    }
   return b
 }
 
@@ -370,8 +244,6 @@ type Update struct {
   id *uuid.UUID
   name *string
   email **string
-  booler *bool
-  balance *float64
 }
 
 func NewUpdate(opts ...UpdateOpt) Update{
@@ -396,16 +268,6 @@ func WithUpdateEmail(email *string)  UpdateOpt {
 		f.email = &email
 	}
 }
-func WithUpdateBooler(booler bool)  UpdateOpt {
-	return func(f *Update) {
-		f.booler = &booler
-	}
-}
-func WithUpdateBalance(balance float64)  UpdateOpt {
-	return func(f *Update) {
-		f.balance = &balance
-	}
-}
 
 func ApplySet[B interface {
     Set(column string, value interface{}) B
@@ -418,12 +280,6 @@ func ApplySet[B interface {
     }
 	if f.email != nil {
       b = b.Set(ColumnUserEmail, *f.email)
-    }
-	if f.booler != nil {
-      b = b.Set(ColumnUserBooler, *f.booler)
-    }
-	if f.balance != nil {
-      b = b.Set(ColumnUserBalance, *f.balance)
     }
 
   return b

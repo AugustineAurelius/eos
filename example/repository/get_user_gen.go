@@ -37,8 +37,6 @@ func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*User, err
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-		ColumnUserBooler,
-		ColumnUserBalance,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	f := &Filter{}
@@ -54,8 +52,6 @@ func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*User, err
 		&userModel.ID,
 		&userModel.Name,
 		&userModel.Email,
-		&userModel.Booler,
-		&userModel.Balance,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
@@ -71,8 +67,6 @@ func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) (Users
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-		ColumnUserBooler,
-		ColumnUserBalance,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	f := &Filter{}
@@ -98,8 +92,6 @@ func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) (Users
 			&userModel.ID,
 			&userModel.Name,
 			&userModel.Email,
-			&userModel.Booler,
-			&userModel.Balance,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
@@ -239,90 +231,6 @@ func getEmail (ctx context.Context, run common.Querier,   opts ...FilterOpt)  ([
 
 	return Emails, err
 }
-func (r *CommandRepository) GetBooler (ctx context.Context,  opts ...FilterOpt)  ([]bool, error){
-	return getBooler(ctx,r.db,opts...)
-}
-
-func (r *QueryRepository) GetBooler (ctx context.Context,  opts ...FilterOpt)  ([]bool, error){
-	return getBooler(ctx,r.db,opts...)
-}
-
-func getBooler (ctx context.Context, run common.Querier,   opts ...FilterOpt)  ([]bool, error){
-	b := sq.Select(
-		ColumnUserBooler,
-	).From(TableUser).PlaceholderFormat(sq.Question)
-
-	f := &Filter{}
-	for i := 0; i < len(opts); i++ {
-		opts[i](f)
-	}
-	b = ApplyWhere(b, *f)
-	query, args := 	b.MustSql()	
-    Boolers := make([]bool, 0, 32) 
-
-	rows, err := run.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error querying database: %w", err)
-	}
-	defer rows.Close()
-
-	var temp bool
-	for rows.Next() {
-		err = rows.Scan(&temp)
-		if err != nil {
-			return nil, fmt.Errorf("error scanning row: %w", err)
-		}
-		Boolers = append(Boolers, temp)
-	}
-
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", rows.Err())
-	}
-
-	return Boolers, err
-}
-func (r *CommandRepository) GetBalance (ctx context.Context,  opts ...FilterOpt)  ([]float64, error){
-	return getBalance(ctx,r.db,opts...)
-}
-
-func (r *QueryRepository) GetBalance (ctx context.Context,  opts ...FilterOpt)  ([]float64, error){
-	return getBalance(ctx,r.db,opts...)
-}
-
-func getBalance (ctx context.Context, run common.Querier,   opts ...FilterOpt)  ([]float64, error){
-	b := sq.Select(
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Question)
-
-	f := &Filter{}
-	for i := 0; i < len(opts); i++ {
-		opts[i](f)
-	}
-	b = ApplyWhere(b, *f)
-	query, args := 	b.MustSql()	
-    Balances := make([]float64, 0, 32) 
-
-	rows, err := run.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error querying database: %w", err)
-	}
-	defer rows.Close()
-
-	var temp float64
-	for rows.Next() {
-		err = rows.Scan(&temp)
-		if err != nil {
-			return nil, fmt.Errorf("error scanning row: %w", err)
-		}
-		Balances = append(Balances, temp)
-	}
-
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", rows.Err())
-	}
-
-	return Balances, err
-}
 
 func (r *CommandRepository) GetLazy (ctx context.Context,  opts ...FilterOpt)  (iterUser, error){
 	return getManyLazy(ctx,r.db,opts...)
@@ -337,8 +245,6 @@ func getManyLazy (ctx context.Context, run common.Querier, opts ...FilterOpt) (i
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-		ColumnUserBooler,
-		ColumnUserBalance,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	f := &Filter{}
@@ -367,8 +273,6 @@ func userIter(rows common.Rows)iterUser{
 				&userModel.ID,
 				&userModel.Name,
 				&userModel.Email,
-				&userModel.Booler,
-				&userModel.Balance,
 			)
 		if err != nil {
 			return

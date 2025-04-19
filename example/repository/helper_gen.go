@@ -32,20 +32,6 @@ func (s Users) ToEmails ()  []*string {
 	}
 	return output
 }
-func (s Users) ToBoolers ()  []bool {
-	output := make([]bool, 0, len(s))
-	for i := 0; i < len(s); i++{
-    output = append(output, s[i].Booler)
-	}
-	return output
-}
-func (s Users) ToBalances ()  []float64 {
-	output := make([]float64, 0, len(s))
-	for i := 0; i < len(s); i++{
-    output = append(output, s[i].Balance)
-	}
-	return output
-}
 func (s Users) FindByID (finder uuid.UUID)  (User, bool) {
 	for i := 0; i < len(s); i++{
 		if s[i].ID  == finder {
@@ -65,22 +51,6 @@ func (s Users) FindByName (finder string)  (User, bool) {
 func (s Users) FindByEmail (finder *string)  (User, bool) {
 	for i := 0; i < len(s); i++{
 		if s[i].Email  == finder {
-			return s[i], true 
-		}
-	}
-	return   User {}, false
-}
-func (s Users) FindByBooler (finder bool)  (User, bool) {
-	for i := 0; i < len(s); i++{
-		if s[i].Booler  == finder {
-			return s[i], true 
-		}
-	}
-	return   User {}, false
-}
-func (s Users) FindByBalance (finder float64)  (User, bool) {
-	for i := 0; i < len(s); i++{
-		if s[i].Balance  == finder {
 			return s[i], true 
 		}
 	}
@@ -107,18 +77,6 @@ func (s Users) SortByEmail (asc bool)  Users {
 	}	
 	sort.Slice(s, func(i, j int) bool {
 		return *s[i].Email > *s[j].Email
-	})
-	return  s
-}
-func (s Users) SortByBalance (asc bool)  Users {
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return s[i].Balance < s[j].Balance
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return s[i].Balance > s[j].Balance
 	})
 	return  s
 }
@@ -152,18 +110,6 @@ func (s Users) GetFirstEmail()  (**string, bool) {
 		return nil, false
 	}
 	return &s[0].Email, true
-}
-func (s Users) GetFirstBooler()  (*bool, bool) {
-	if len(s) < 1 {
-		return nil, false
-	}
-	return &s[0].Booler, true
-}
-func (s Users) GetFirstBalance()  (*float64, bool) {
-	if len(s) < 1 {
-		return nil, false
-	}
-	return &s[0].Balance, true
 }
 
 
@@ -279,24 +225,6 @@ func (i iterUser) FilterByEmail(email *string) iterUser {
 	return func(yield func(User) bool ){
 	  for elem := range i {
             if email == elem.Email && !yield(elem) {
-                return
-            }
-        }
-	}
-}
-func (i iterUser) FilterByBooler(booler bool) iterUser {
-	return func(yield func(User) bool ){
-	  for elem := range i {
-            if booler == elem.Booler && !yield(elem) {
-                return
-            }
-        }
-	}
-}
-func (i iterUser) FilterByBalance(balance float64) iterUser {
-	return func(yield func(User) bool ){
-	  for elem := range i {
-            if balance == elem.Balance && !yield(elem) {
                 return
             }
         }

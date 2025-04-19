@@ -49,8 +49,6 @@ func (r *CommandRepository) NewCursor(ctx context.Context,  params BuilderParams
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-		ColumnUserBooler,
-		ColumnUserBalance,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	f := &Filter{}
@@ -88,8 +86,6 @@ func (r *QueryRepository) NewCursor(ctx context.Context,  params BuilderParams, 
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
-		ColumnUserBooler,
-		ColumnUserBalance,
 	).From(TableUser).PlaceholderFormat(sq.Question)
 
 	f := &Filter{}
@@ -161,8 +157,6 @@ func (c *Cursor) fetchRows() error {
 			&item.ID,
 			&item.Name,
 			&item.Email,
-			&item.Booler,
-			&item.Balance,
 		)
 		if err != nil {
 			return fmt.Errorf("error scanning row: %w", err)
