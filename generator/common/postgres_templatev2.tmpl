@@ -94,7 +94,7 @@ func (db *{{.DatabaseName}}DB) Close() error {
 }
 
 
-func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args ...any) row{
+func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args ...any) Row{
 	{{ if .IncludeTelemetry }}
 	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -115,7 +115,7 @@ func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args 
 	return &{{.DatabaseName}}Row{row}
 }
 
-func (db *{{.DatabaseName}}DB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *{{.DatabaseName}}DB) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	{{if .IncludeTelemetry}}
 	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -217,7 +217,7 @@ type {{.DatabaseName}}Tx struct {
 	pgx.Tx
 }
 
-func (p *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (p *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	rows, err := p.Tx.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		return nil, err
@@ -225,7 +225,7 @@ func (p *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...a
 	return &{{.DatabaseName}}Rows{rows}, nil
 }
 
-func (p *{{.DatabaseName}}Tx) QueryRow(ctx context.Context, query string, args ...any) row {
+func (p *{{.DatabaseName}}Tx) QueryRow(ctx context.Context, query string, args ...any) Row {
 	return &{{.DatabaseName}}Row{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
 }
 

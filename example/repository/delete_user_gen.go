@@ -5,8 +5,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	txrunner "github.com/AugustineAurelius/eos/example/tx_runner" 
- 	common "github.com/AugustineAurelius/eos/example/common"
 
 	sq "github.com/Masterminds/squirrel"
 )
@@ -15,14 +13,6 @@ import (
 
 // DeleteUser deletes a User by ID.
 func (r *CommandRepository) Delete(ctx context.Context, opts ...FilterOpt) error {
-	if tx, ok := txrunner.FromContex(ctx); ok {
-		return delete(ctx, tx, opts...)
-    } else {
-		return delete(ctx, r.db, opts...)
-    }
-}
-
-func delete(ctx context.Context, run common.Querier, opts ...FilterOpt) error {
 	b := sq.Delete(TableUser).PlaceholderFormat(sq.Question)
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -30,12 +20,10 @@ func delete(ctx context.Context, run common.Querier, opts ...FilterOpt) error {
 	}
 	b = ApplyWhere(b, *f)
 	query, args := 	b.MustSql()	
-	if _, err := run.Exec(ctx, query, args...); err != nil {
+	if _, err := r.db.Exec(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec delete query %s with args %v error = %w", query, args, err)
 	}
 	return nil
 }
-
-
 
 

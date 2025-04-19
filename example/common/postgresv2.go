@@ -59,7 +59,7 @@ func (db *PostgresDB) Close() error {
 }
 
 
-func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) row{
+func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) Row{
 	
 	
 	start := time.Now()
@@ -75,7 +75,7 @@ func (db *PostgresDB) QueryRow(ctx context.Context, query string, args ...any) r
 	return &PostgresRow{row}
 }
 
-func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *PostgresDB) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	
 	
     start := time.Now()
@@ -161,7 +161,7 @@ type PostgresTx struct {
 	pgx.Tx
 }
 
-func (p *PostgresTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (p *PostgresTx) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	rows, err := p.Tx.Query(ctx, ReplaceQuestions(query), args...)
 	if err != nil {
 		return nil, err
@@ -169,7 +169,7 @@ func (p *PostgresTx) Query(ctx context.Context, query string, args ...any) (rows
 	return &PostgresRows{rows}, nil
 }
 
-func (p *PostgresTx) QueryRow(ctx context.Context, query string, args ...any) row {
+func (p *PostgresTx) QueryRow(ctx context.Context, query string, args ...any) Row {
 	return &PostgresRow{p.Tx.QueryRow(ctx, ReplaceQuestions(query), args...)}
 }
 

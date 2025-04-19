@@ -11,6 +11,8 @@ const (
 	ColumnUserID = "id"
 	ColumnUserName = "name"
 	ColumnUserEmail = "email"
+	ColumnUserBooler = "booler"
+	ColumnUserBalance = "balance"
 )
 
 
@@ -26,6 +28,12 @@ type UserModel struct {
 	
 		Email *string
 	
+	
+		Booler bool
+	
+	
+		Balance float64
+	
 }
 
 func (m UserModel) Values() []any {
@@ -33,6 +41,8 @@ func (m UserModel) Values() []any {
 			m.ID,
 			m.Name,
 			m.Email,
+			m.Booler,
+			m.Balance,
 	}
 }
 
@@ -47,6 +57,12 @@ func Converter(user User) UserModel {
 			
 		Email: user.Email, 
 			
+			
+		Booler: user.Booler, 
+			
+			
+		Balance: user.Balance, 
+			
 	}
 }
 
@@ -60,6 +76,12 @@ func ReverseConverter(userModel UserModel) User {
 			
 			
 		Email: userModel.Email, 
+			
+			
+		Booler: userModel.Booler, 
+			
+			
+		Balance: userModel.Balance, 
 				
 	}
 }

@@ -134,7 +134,7 @@ func New{{.DatabaseName}}InMemory(ctx context.Context,
 }, nil
 }
 
-func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args ...any) row {
+func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args ...any) Row {
 	{{ if .IncludeTelemetry }}
 	ctx, span := db.telemetry.Start(ctx, "QueryRow",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -154,7 +154,7 @@ func (db *{{.DatabaseName}}DB) QueryRow(ctx context.Context, query string, args 
     return row
 }
 
-func (db *{{.DatabaseName}}DB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *{{.DatabaseName}}DB) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	{{if .IncludeTelemetry}}
 	ctx, span := db.telemetry.Start(ctx, "Query",trace.WithAttributes(attribute.String("query", query), attribute.String("db_type", "{{.DatabaseName}}")))
 	defer span.End()
@@ -246,7 +246,7 @@ type {{.DatabaseName}}Tx struct {
 	*sql.Tx
 }
 
-func (s *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (s *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	rows, err := s.Tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -254,7 +254,7 @@ func (s *{{.DatabaseName}}Tx) Query(ctx context.Context, query string, args ...a
 	return &{{.DatabaseName}}Rows{rows}, nil
 }
 
-func (s *{{.DatabaseName}}Tx) QueryRow(ctx context.Context, query string, args ...any) row {
+func (s *{{.DatabaseName}}Tx) QueryRow(ctx context.Context, query string, args ...any) Row {
 	return s.Tx.QueryRowContext(ctx, query, args...)
 }
 

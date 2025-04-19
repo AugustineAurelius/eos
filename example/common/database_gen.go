@@ -23,19 +23,19 @@ type Database interface {
 
 // Query
 type Querier interface {
-	Query(ctx context.Context, query string, args ...any) (rows, error)
-	QueryRow(ctx context.Context, query string, args ...any) row
+	Query(ctx context.Context, query string, args ...any) (Rows, error)
+	QueryRow(ctx context.Context, query string, args ...any) Row
 	Exec(ctx context.Context, query string, args ...any) (result, error)
 }
 
-type rows interface {
+type Rows interface {
 	io.Closer
-	row
+	Row
 	Err() error
 	Next() bool
 }
 
-type row interface {
+type Row interface {
 	Scan(dest ...any) error
 }
 

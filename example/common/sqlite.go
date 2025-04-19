@@ -76,7 +76,7 @@ func NewSQLiteInMemory(ctx context.Context,
 }, nil
 }
 
-func (db *SQLiteDB) QueryRow(ctx context.Context, query string, args ...any) row {
+func (db *SQLiteDB) QueryRow(ctx context.Context, query string, args ...any) Row {
 	
 	
 	start := time.Now()
@@ -91,7 +91,7 @@ func (db *SQLiteDB) QueryRow(ctx context.Context, query string, args ...any) row
     return row
 }
 
-func (db *SQLiteDB) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (db *SQLiteDB) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	
 	
     start := time.Now()
@@ -167,7 +167,7 @@ type SQLiteTx struct {
 	*sql.Tx
 }
 
-func (s *SQLiteTx) Query(ctx context.Context, query string, args ...any) (rows, error) {
+func (s *SQLiteTx) Query(ctx context.Context, query string, args ...any) (Rows, error) {
 	rows, err := s.Tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (s *SQLiteTx) Query(ctx context.Context, query string, args ...any) (rows, 
 	return &SQLiteRows{rows}, nil
 }
 
-func (s *SQLiteTx) QueryRow(ctx context.Context, query string, args ...any) row {
+func (s *SQLiteTx) QueryRow(ctx context.Context, query string, args ...any) Row {
 	return s.Tx.QueryRowContext(ctx, query, args...)
 }
 

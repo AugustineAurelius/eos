@@ -44,8 +44,8 @@ func Generate(log, tel, met bool) {
 	generateFile("database_gen.go", "database_template.tmpl", data)
 	generateDatabase("SQLite", "sqlite.go", "sqlite_template.tmpl", data)
 	// generateFile("postgres_gen.go", "postgres_template.tmpl", data)
-	generateDatabase("Cassandra", "cassandra.go", "cassandra_template.tmpl", data)
-	generateDatabase("Clickhouse", "clickhouse.go", "clickhouse_template.tmpl", data)
+	// generateDatabase("Cassandra", "cassandra.go", "cassandra_template.tmpl", data)
+	// generateDatabase("Clickhouse", "clickhouse.go", "clickhouse_template.tmpl", data)
 	generateDatabase("Postgres", "postgresv2.go", "postgres_templatev2.tmpl", data)
 
 }

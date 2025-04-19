@@ -3,7 +3,6 @@ package {{.PackageName}}
 
 import (
 	sq "github.com/Masterminds/squirrel"
-	"sort"
 	common "{{.CommonPath}}"
     {{- range .Imports }}
     {{ . }}
@@ -101,19 +100,19 @@ func ApplyWhere[B interface {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
     }
 	if f.not{{.Name | lower}} != nil {
-      b = b.Where(sq.NotEq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+      b = b.Where(sq.NotEq{Column{{$.MessageName}}{{.Name}}: *f.not{{.Name | lower}}})
     }
 	if f.lt{{.Name | lower}} != nil {
-      b = b.Where(sq.Lt{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+      b = b.Where(sq.Lt{Column{{$.MessageName}}{{.Name}}: *f.lt{{.Name | lower}}})
     }
 	if f.gt{{.Name | lower}} != nil {
-      b = b.Where(sq.Gt{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+      b = b.Where(sq.Gt{Column{{$.MessageName}}{{.Name}}: *f.gt{{.Name | lower}}})
     }
 	if f.lteq{{.Name | lower}} != nil {
-      b = b.Where(sq.LtOrEq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+      b = b.Where(sq.LtOrEq{Column{{$.MessageName}}{{.Name}}: *f.lteq{{.Name | lower}}})
     }
 	if f.gteq{{.Name | lower}} != nil {
-      b = b.Where(sq.GtOrEq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
+      b = b.Where(sq.GtOrEq{Column{{$.MessageName}}{{.Name}}: *f.gteq{{.Name | lower}}})
     }
 	if f.{{.Name | lower}}s != nil {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: f.{{.Name | lower}}s})
@@ -158,123 +157,3 @@ func ApplySet[B interface {
 
   return b
 }
-
-type {{.MessageName}}s []{{.MessageName}}
-
-{{- range .Fields }}
-func (s {{$.MessageName}}s) To{{.Name}}s ()  []{{.Type}} {
-	output := make([]{{.Type}}, 0, len(s))
-	for i := 0; i < len(s); i++{
-    output = append(output, s[i].{{.Name}})
-	}
-	return output
-}
-{{- end }}
-
-
-{{- range .Fields }}
-	{{- if contains .Type "[]"}}
-	{{- else}}
-func (s {{$.MessageName}}s) FindBy{{.Name}} (finder {{.Type}})  ({{$.MessageName}}, bool) {
-	for i := 0; i < len(s); i++{
-		if s[i].{{.Name}}  == finder {
-			return s[i], true 
-		}
-	}
-	return   {{$.MessageName}} {}, false
-}
-{{- end }}
-{{- end}}
-
-
-{{- range .Fields }}
-	{{- if contains .Type "[]"}}
-	{{- else if contains .Type "time.Time"}}
-func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
-	{{- if contains .Type "*"}}
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return s[i].{{.Name}}.Before( *s[j].{{.Name}})
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return s[i].{{.Name}}.After( *s[j].{{.Name}})
-	})
-	return  s
-	{{- else}}
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return s[i].{{.Name}}.Before( s[j].{{.Name}})
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return s[i].{{.Name}}.After(s[j].{{.Name}})
-	})
-	return  s
-	{{- end}}
-}
-	{{- else if contains .Type "bool"}}
-	{{- else if contains .Type "."}}
-	{{- else}}
-func (s {{$.MessageName}}s) SortBy{{.Name}} (asc bool)  {{$.MessageName}}s {
-	{{- if contains .Type "*"}}
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return *s[i].{{.Name}} < *s[j].{{.Name}}
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return *s[i].{{.Name}} > *s[j].{{.Name}}
-	})
-	return  s
-	{{- else}}
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return s[i].{{.Name}} < s[j].{{.Name}}
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return s[i].{{.Name}} > s[j].{{.Name}}
-	})
-	return  s
-	{{- end}}
-}
-	{{- end}}
-{{- end }}
-
-
-
-
-func (s {{$.MessageName}}s) FilterFunc(f func(i {{.MessageName}}) bool)  {{.MessageName}}s {
-	output := make({{.MessageName}}s, 0, len(s))
-	for i := 0; i < len(s); i++{ 
-		if f(s[i]) {
-			output = append(output, s[i])
-		}
-	}
-	return output
-}
-
-{{- range .Fields }}
-func (s {{$.MessageName}}s) GetFirst{{.Name}}()  (*{{.Type}}, bool) {
-	if len(s) < 1 {
-		return nil, false
-	}
-	return &s[0].{{.Name}}, true
-}
-{{- end }}
-
-
-
-func (s {{$.MessageName}}s) GetFirst()  ({{.MessageName}}, bool) {
-	if len(s) < 1 {
-		return {{.MessageName}}{}, false
-	}
-	return s[0], true
-}
-
-

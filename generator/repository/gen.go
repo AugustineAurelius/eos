@@ -92,6 +92,7 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 	generateFile("repository_gen.go", "repository_template.tmpl", data)
 
 	generateFile("cursor_gen.go", "cursor_template.tmpl", data)
+	generateFile("helper_gen.go", "helper_template.tmpl", data)
 
 }
 

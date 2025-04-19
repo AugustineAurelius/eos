@@ -3,7 +3,6 @@ package repository
 
 import (
 	sq "github.com/Masterminds/squirrel"
-	"sort"
 	common "github.com/AugustineAurelius/eos/example/common"
     "github.com/google/uuid"
 )
@@ -52,6 +51,20 @@ type Filter struct {
   gteqemail **string
   lteqemail **string
   emails []*string
+  booler *bool
+  notbooler *bool
+  gtbooler *bool
+  ltbooler *bool
+  gteqbooler *bool
+  lteqbooler *bool
+  boolers []bool
+  balance *float64
+  notbalance *float64
+  gtbalance *float64
+  ltbalance *float64
+  gteqbalance *float64
+  lteqbalance *float64
+  balances []float64
 }
 
 type FilterOpt func(f *Filter)
@@ -168,6 +181,76 @@ func WithEmails (emails ...*string)  FilterOpt {
 		f.emails = append(f.emails, emails...)
 	}
 }
+func WithBooler(booler bool)  FilterOpt {
+	return func(f *Filter) {
+		f.booler = &booler
+	}
+}
+func WithBoolerNot(booler bool)  FilterOpt {
+	return func(f *Filter) {
+		f.notbooler = &booler
+	}
+}
+func WithBoolerMoreThen(booler bool)  FilterOpt {
+	return func(f *Filter) {
+		f.gtbooler = &booler
+	}
+}
+func WithBoolerLowerThen(booler bool)  FilterOpt {
+	return func(f *Filter) {
+		f.ltbooler = &booler
+	}
+}
+func WithBoolerMoreOrEqualThen(booler bool)  FilterOpt {
+	return func(f *Filter) {
+		f.gteqbooler = &booler
+	}
+}
+func WithBoolerLowerOrEqualThen(booler bool)  FilterOpt {
+	return func(f *Filter) {
+		f.lteqbooler = &booler
+	}
+}
+func WithBoolers (boolers ...bool)  FilterOpt {
+	return func(f *Filter) {
+		f.boolers = append(f.boolers, boolers...)
+	}
+}
+func WithBalance(balance float64)  FilterOpt {
+	return func(f *Filter) {
+		f.balance = &balance
+	}
+}
+func WithBalanceNot(balance float64)  FilterOpt {
+	return func(f *Filter) {
+		f.notbalance = &balance
+	}
+}
+func WithBalanceMoreThen(balance float64)  FilterOpt {
+	return func(f *Filter) {
+		f.gtbalance = &balance
+	}
+}
+func WithBalanceLowerThen(balance float64)  FilterOpt {
+	return func(f *Filter) {
+		f.ltbalance = &balance
+	}
+}
+func WithBalanceMoreOrEqualThen(balance float64)  FilterOpt {
+	return func(f *Filter) {
+		f.gteqbalance = &balance
+	}
+}
+func WithBalanceLowerOrEqualThen(balance float64)  FilterOpt {
+	return func(f *Filter) {
+		f.lteqbalance = &balance
+	}
+}
+func WithBalances (balances ...float64)  FilterOpt {
+	return func(f *Filter) {
+		f.balances = append(f.balances, balances...)
+	}
+}
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
@@ -176,19 +259,19 @@ func ApplyWhere[B interface {
       b = b.Where(sq.Eq{ColumnUserID: *f.id})
     }
 	if f.notid != nil {
-      b = b.Where(sq.NotEq{ColumnUserID: *f.id})
+      b = b.Where(sq.NotEq{ColumnUserID: *f.notid})
     }
 	if f.ltid != nil {
-      b = b.Where(sq.Lt{ColumnUserID: *f.id})
+      b = b.Where(sq.Lt{ColumnUserID: *f.ltid})
     }
 	if f.gtid != nil {
-      b = b.Where(sq.Gt{ColumnUserID: *f.id})
+      b = b.Where(sq.Gt{ColumnUserID: *f.gtid})
     }
 	if f.lteqid != nil {
-      b = b.Where(sq.LtOrEq{ColumnUserID: *f.id})
+      b = b.Where(sq.LtOrEq{ColumnUserID: *f.lteqid})
     }
 	if f.gteqid != nil {
-      b = b.Where(sq.GtOrEq{ColumnUserID: *f.id})
+      b = b.Where(sq.GtOrEq{ColumnUserID: *f.gteqid})
     }
 	if f.ids != nil {
       b = b.Where(sq.Eq{ColumnUserID: f.ids})
@@ -197,19 +280,19 @@ func ApplyWhere[B interface {
       b = b.Where(sq.Eq{ColumnUserName: *f.name})
     }
 	if f.notname != nil {
-      b = b.Where(sq.NotEq{ColumnUserName: *f.name})
+      b = b.Where(sq.NotEq{ColumnUserName: *f.notname})
     }
 	if f.ltname != nil {
-      b = b.Where(sq.Lt{ColumnUserName: *f.name})
+      b = b.Where(sq.Lt{ColumnUserName: *f.ltname})
     }
 	if f.gtname != nil {
-      b = b.Where(sq.Gt{ColumnUserName: *f.name})
+      b = b.Where(sq.Gt{ColumnUserName: *f.gtname})
     }
 	if f.lteqname != nil {
-      b = b.Where(sq.LtOrEq{ColumnUserName: *f.name})
+      b = b.Where(sq.LtOrEq{ColumnUserName: *f.lteqname})
     }
 	if f.gteqname != nil {
-      b = b.Where(sq.GtOrEq{ColumnUserName: *f.name})
+      b = b.Where(sq.GtOrEq{ColumnUserName: *f.gteqname})
     }
 	if f.names != nil {
       b = b.Where(sq.Eq{ColumnUserName: f.names})
@@ -218,22 +301,64 @@ func ApplyWhere[B interface {
       b = b.Where(sq.Eq{ColumnUserEmail: *f.email})
     }
 	if f.notemail != nil {
-      b = b.Where(sq.NotEq{ColumnUserEmail: *f.email})
+      b = b.Where(sq.NotEq{ColumnUserEmail: *f.notemail})
     }
 	if f.ltemail != nil {
-      b = b.Where(sq.Lt{ColumnUserEmail: *f.email})
+      b = b.Where(sq.Lt{ColumnUserEmail: *f.ltemail})
     }
 	if f.gtemail != nil {
-      b = b.Where(sq.Gt{ColumnUserEmail: *f.email})
+      b = b.Where(sq.Gt{ColumnUserEmail: *f.gtemail})
     }
 	if f.lteqemail != nil {
-      b = b.Where(sq.LtOrEq{ColumnUserEmail: *f.email})
+      b = b.Where(sq.LtOrEq{ColumnUserEmail: *f.lteqemail})
     }
 	if f.gteqemail != nil {
-      b = b.Where(sq.GtOrEq{ColumnUserEmail: *f.email})
+      b = b.Where(sq.GtOrEq{ColumnUserEmail: *f.gteqemail})
     }
 	if f.emails != nil {
       b = b.Where(sq.Eq{ColumnUserEmail: f.emails})
+    }
+	if f.booler != nil {
+      b = b.Where(sq.Eq{ColumnUserBooler: *f.booler})
+    }
+	if f.notbooler != nil {
+      b = b.Where(sq.NotEq{ColumnUserBooler: *f.notbooler})
+    }
+	if f.ltbooler != nil {
+      b = b.Where(sq.Lt{ColumnUserBooler: *f.ltbooler})
+    }
+	if f.gtbooler != nil {
+      b = b.Where(sq.Gt{ColumnUserBooler: *f.gtbooler})
+    }
+	if f.lteqbooler != nil {
+      b = b.Where(sq.LtOrEq{ColumnUserBooler: *f.lteqbooler})
+    }
+	if f.gteqbooler != nil {
+      b = b.Where(sq.GtOrEq{ColumnUserBooler: *f.gteqbooler})
+    }
+	if f.boolers != nil {
+      b = b.Where(sq.Eq{ColumnUserBooler: f.boolers})
+    }
+	if f.balance != nil {
+      b = b.Where(sq.Eq{ColumnUserBalance: *f.balance})
+    }
+	if f.notbalance != nil {
+      b = b.Where(sq.NotEq{ColumnUserBalance: *f.notbalance})
+    }
+	if f.ltbalance != nil {
+      b = b.Where(sq.Lt{ColumnUserBalance: *f.ltbalance})
+    }
+	if f.gtbalance != nil {
+      b = b.Where(sq.Gt{ColumnUserBalance: *f.gtbalance})
+    }
+	if f.lteqbalance != nil {
+      b = b.Where(sq.LtOrEq{ColumnUserBalance: *f.lteqbalance})
+    }
+	if f.gteqbalance != nil {
+      b = b.Where(sq.GtOrEq{ColumnUserBalance: *f.gteqbalance})
+    }
+	if f.balances != nil {
+      b = b.Where(sq.Eq{ColumnUserBalance: f.balances})
     }
   return b
 }
@@ -245,6 +370,8 @@ type Update struct {
   id *uuid.UUID
   name *string
   email **string
+  booler *bool
+  balance *float64
 }
 
 func NewUpdate(opts ...UpdateOpt) Update{
@@ -269,6 +396,16 @@ func WithUpdateEmail(email *string)  UpdateOpt {
 		f.email = &email
 	}
 }
+func WithUpdateBooler(booler bool)  UpdateOpt {
+	return func(f *Update) {
+		f.booler = &booler
+	}
+}
+func WithUpdateBalance(balance float64)  UpdateOpt {
+	return func(f *Update) {
+		f.balance = &balance
+	}
+}
 
 func ApplySet[B interface {
     Set(column string, value interface{}) B
@@ -282,119 +419,12 @@ func ApplySet[B interface {
 	if f.email != nil {
       b = b.Set(ColumnUserEmail, *f.email)
     }
+	if f.booler != nil {
+      b = b.Set(ColumnUserBooler, *f.booler)
+    }
+	if f.balance != nil {
+      b = b.Set(ColumnUserBalance, *f.balance)
+    }
 
   return b
 }
-
-type Users []User
-func (s Users) ToIDs ()  []uuid.UUID {
-	output := make([]uuid.UUID, 0, len(s))
-	for i := 0; i < len(s); i++{
-    output = append(output, s[i].ID)
-	}
-	return output
-}
-func (s Users) ToNames ()  []string {
-	output := make([]string, 0, len(s))
-	for i := 0; i < len(s); i++{
-    output = append(output, s[i].Name)
-	}
-	return output
-}
-func (s Users) ToEmails ()  []*string {
-	output := make([]*string, 0, len(s))
-	for i := 0; i < len(s); i++{
-    output = append(output, s[i].Email)
-	}
-	return output
-}
-func (s Users) FindByID (finder uuid.UUID)  (User, bool) {
-	for i := 0; i < len(s); i++{
-		if s[i].ID  == finder {
-			return s[i], true 
-		}
-	}
-	return   User {}, false
-}
-func (s Users) FindByName (finder string)  (User, bool) {
-	for i := 0; i < len(s); i++{
-		if s[i].Name  == finder {
-			return s[i], true 
-		}
-	}
-	return   User {}, false
-}
-func (s Users) FindByEmail (finder *string)  (User, bool) {
-	for i := 0; i < len(s); i++{
-		if s[i].Email  == finder {
-			return s[i], true 
-		}
-	}
-	return   User {}, false
-}
-func (s Users) SortByName (asc bool)  Users {
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return s[i].Name < s[j].Name
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return s[i].Name > s[j].Name
-	})
-	return  s
-}
-func (s Users) SortByEmail (asc bool)  Users {
-	if asc {
-		sort.Slice(s, func(i, j int) bool {
-			return *s[i].Email < *s[j].Email
-		})
-		return s
-	}	
-	sort.Slice(s, func(i, j int) bool {
-		return *s[i].Email > *s[j].Email
-	})
-	return  s
-}
-
-
-
-
-func (s Users) FilterFunc(f func(i User) bool)  Users {
-	output := make(Users, 0, len(s))
-	for i := 0; i < len(s); i++{ 
-		if f(s[i]) {
-			output = append(output, s[i])
-		}
-	}
-	return output
-}
-func (s Users) GetFirstID()  (*uuid.UUID, bool) {
-	if len(s) < 1 {
-		return nil, false
-	}
-	return &s[0].ID, true
-}
-func (s Users) GetFirstName()  (*string, bool) {
-	if len(s) < 1 {
-		return nil, false
-	}
-	return &s[0].Name, true
-}
-func (s Users) GetFirstEmail()  (**string, bool) {
-	if len(s) < 1 {
-		return nil, false
-	}
-	return &s[0].Email, true
-}
-
-
-
-func (s Users) GetFirst()  (User, bool) {
-	if len(s) < 1 {
-		return User{}, false
-	}
-	return s[0], true
-}
-
-
