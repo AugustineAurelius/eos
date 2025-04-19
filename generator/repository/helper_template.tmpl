@@ -143,6 +143,7 @@ func (s {{.MessageName}}s) All() iter{{.MessageName}} {
 // Iterators
 type iter{{.MessageName}} iter.Seq[{{.MessageName}}]
 
+
 func (i iter{{.MessageName}}) FilterFunc(predicate func({{.MessageName}}) bool) iter{{.MessageName}} {
     return func(yield func({{.MessageName}}) bool) {
         for elem := range i {
@@ -225,6 +226,40 @@ func (i iter{{$.MessageName}}) FilterBy{{.Name}}({{.Name | lower}} {{.Type}}) it
 }
 {{- end}}
 
+{{- range .Fields }}
+{{- if contains .Type "int" }}
+func (i iter{{$.MessageName}}) To{{.Name}}s() {{.Type}}Iter {
+	return func(yield func({{.Type}}) bool ){
+	  for elem := range i {
+            if  !yield(elem.{{.Name}}) {
+                return
+            }
+        }
+	}
+}
+{{- else if contains .Type "float"}}
+func (i iter{{$.MessageName}}) To{{.Name}}s()  {{.Type}}Iter {
+	return func(yield func({{.Type}}) bool ){
+	  for elem := range i {
+            if  !yield(elem.{{.Name}}) {
+                return
+            }
+        }
+	}
+}
+{{- else}}
+func (i iter{{$.MessageName}}) To{{.Name}}s() iter.Seq[{{.Type}}] {
+	return func(yield func({{.Type}}) bool ){
+	  for elem := range i {
+            if  !yield(elem.{{.Name}}) {
+                return
+            }
+        }
+	}
+}
+{{- end}}
+{{- end}}
+
 func (i iter{{.MessageName}}) First() ({{.MessageName}}, bool) {
     for elem := range i {
         return elem, true
@@ -242,3 +277,58 @@ func (i iter{{.MessageName}}) ForEach(f func({{.MessageName}}) )  {
 func (i iter{{.MessageName}}) Collect() ([]{{.MessageName}}) {
 	return slices.Collect(iter.Seq[{{.MessageName}}](i))
 }
+
+//	-1 if x is less than y,
+//	 0 if x equals y,
+//	+1 if x is greater than y.
+func(i iter{{.MessageName}}) Sort(sortFunc func(x,y {{.MessageName}}) int) []{{.MessageName}}{
+	return slices.SortedFunc(iter.Seq[{{.MessageName}}](i), sortFunc)
+}
+
+
+{{- range .IteratorNumber }}
+type  {{.}}Iter     iter.Seq[{{.}}]
+{{- end}}
+
+{{- range .IteratorNumber }}
+func (i {{.}}Iter) Sum() {{.}}{
+	var res {{.}}
+	for elem := range i{
+		res += elem
+	}
+	return res
+}
+func (i {{.}}Iter) Min() {{.}} {
+    var min {{.}}
+    first := true
+    for elem := range i {
+        if first || elem < min {
+            min = elem
+            first = false
+        }
+    }
+    return min
+}
+func (i {{.}}Iter) Max() {{.}} {
+    var max {{.}}
+    first := true
+    for elem := range i {
+        if first || elem > max {
+            max = elem
+            first = false
+        }
+    }
+    return max
+}
+func (i {{.}}Iter) Average() {{.}} {
+    var sum,count {{.}}
+    for elem := range i {
+        sum += elem
+        count++
+    }
+    if count == 0 {
+        return 0
+    }
+    return sum / count
+}
+{{- end}}

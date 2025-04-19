@@ -16,7 +16,7 @@ import (
 func (r *CommandRepository) Create(ctx context.Context,  user *User) error {
 	model := Converter(*user)
 	query, args := sq.Insert(TableUser).
-		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail).
+		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).
 		Values(model.Values()...).PlaceholderFormat(sq.Question).MustSql()
 
 	if _, err := r.db.Exec(ctx, query, args...); err != nil {

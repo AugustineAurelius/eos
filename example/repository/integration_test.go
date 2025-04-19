@@ -17,6 +17,7 @@ import (
 	"github.com/AugustineAurelius/eos/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -80,8 +81,8 @@ func Test_WithDatabases(t *testing.T) {
 				db, err := common.NewSQLiteInMemory(context.Background(), logger)
 				assert.NoError(t, err)
 
-				_, err = db.Exec(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT);`)
-				assert.NoError(t, err)
+				_, err = db.Exec(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT, balance float);`)
+				require.NoError(t, err)
 
 				return &db
 
@@ -110,8 +111,8 @@ func Test_WithDatabases(t *testing.T) {
 
 				assert.NoError(t, err)
 
-				_, err = db.Exec(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT);`)
-				assert.NoError(t, err)
+				_, err = db.Exec(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT, balance float);`)
+				require.NoError(t, err)
 
 				return &db
 			},

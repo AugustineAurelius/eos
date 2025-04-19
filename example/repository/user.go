@@ -11,7 +11,7 @@ type User struct {
 	Name  string
 	Email *string
 	// Booler  bool
-	// Balance float64
+	Balance float64
 	// Created time.Time
 	// Addresses []string
 	// UserTime int

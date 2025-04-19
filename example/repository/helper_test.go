@@ -14,18 +14,18 @@ func pointerGet[T any](t T) *T {
 func Test_Iter(t *testing.T) {
 
 	users := Users{
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet(gofakeit.Email())},
-		{ID: uuid.New(), Email: pointerGet("gofakeit.Email()")},
-		{ID: uuid.New(), Email: pointerGet("gofakeit.Email()")},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
+		{ID: uuid.New(), Email: pointerGet(gofakeit.Email()), Balance: gofakeit.Float64()},
 	}
 
-	users.All().
+	iter := users.All().
 		Map(func(u User) User {
 			return u
 		}).
@@ -35,9 +35,18 @@ func Test_Iter(t *testing.T) {
 				return *u.Email
 			}
 			return u.Email
-		}).
-		ForEach(func(u User) {
-			fmt.Println(*u.Email)
-		})
+		}).Sort(func(x, y User) int {
+		if x.Balance < y.Balance {
+			return -1
+		} else if x.Balance > y.Balance {
+			return 1
+		}
+		return 0
+	})
+
+	for _, elem := range iter {
+
+		fmt.Println(elem)
+	}
 
 }

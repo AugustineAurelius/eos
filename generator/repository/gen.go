@@ -26,17 +26,18 @@ type Field struct {
 }
 
 type MessageData struct {
-	PackageName  string
-	MessageName  string
-	TableName    string
-	Fields       []Field
-	Columns      string
-	Placeholders string
-	ModulePath   string
-	TxRunnerPath string
-	CommonPath   string
-	WithTx       bool
-	Imports      []string
+	PackageName    string
+	MessageName    string
+	TableName      string
+	Fields         []Field
+	Columns        string
+	Placeholders   string
+	ModulePath     string
+	TxRunnerPath   string
+	CommonPath     string
+	WithTx         bool
+	Imports        []string
+	IteratorNumber []string
 }
 
 func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
@@ -65,17 +66,18 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 	tableName := structName + "s"
 
 	data := MessageData{
-		PackageName:  packageName,
-		MessageName:  structName,
-		TableName:    tableName,
-		Fields:       fields,
-		Columns:      strings.Join(getColumns(fields), ", "),
-		Placeholders: strings.Join(getPlaceholders(structName, fields), ", "),
-		ModulePath:   helpers.GetPackagePath(),
-		TxRunnerPath: helpers.GetModulePath() + txRunnerPath,
-		CommonPath:   helpers.GetModulePath() + commonPath,
-		WithTx:       withTX,
-		Imports:      imports,
+		PackageName:    packageName,
+		MessageName:    structName,
+		TableName:      tableName,
+		Fields:         fields,
+		Columns:        strings.Join(getColumns(fields), ", "),
+		Placeholders:   strings.Join(getPlaceholders(structName, fields), ", "),
+		ModulePath:     helpers.GetPackagePath(),
+		TxRunnerPath:   helpers.GetModulePath() + txRunnerPath,
+		CommonPath:     helpers.GetModulePath() + commonPath,
+		WithTx:         withTX,
+		Imports:        imports,
+		IteratorNumber: []string{"int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "float32", "float64"},
 	}
 
 	generateFile("schema.go", "schema_template.tmpl", data)

@@ -11,6 +11,7 @@ const (
 	ColumnUserID = "id"
 	ColumnUserName = "name"
 	ColumnUserEmail = "email"
+	ColumnUserBalance = "balance"
 )
 
 
@@ -26,6 +27,9 @@ type UserModel struct {
 	
 		Email *string
 	
+	
+		Balance float64
+	
 }
 
 func (m UserModel) Values() []any {
@@ -33,6 +37,7 @@ func (m UserModel) Values() []any {
 			m.ID,
 			m.Name,
 			m.Email,
+			m.Balance,
 	}
 }
 
@@ -47,6 +52,9 @@ func Converter(user User) UserModel {
 			
 		Email: user.Email, 
 			
+			
+		Balance: user.Balance, 
+			
 	}
 }
 
@@ -60,6 +68,9 @@ func ReverseConverter(userModel UserModel) User {
 			
 			
 		Email: userModel.Email, 
+			
+			
+		Balance: userModel.Balance, 
 				
 	}
 }
