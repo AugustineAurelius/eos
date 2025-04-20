@@ -30,7 +30,7 @@ func count(ctx context.Context, run common.Querier, opts ...FilterOpt) (int, err
     query, args := 	b.MustSql()
 
     var count int
-    err := run.QueryRow(ctx, query,args).Scan(&count)
+    err := run.QueryRow(ctx, query,args...).Scan(&count)
     if err != nil {
         return 0, fmt.Errorf("failed to count query %s with args %v error = %w" , query, args, err)
     }
