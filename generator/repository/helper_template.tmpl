@@ -247,6 +247,7 @@ func (i iter{{$.MessageName}}) To{{.Name}}s()  {{.Type}}Iter {
         }
 	}
 }
+{{- else if contains .Type "."}}
 {{- else}}
 func (i iter{{$.MessageName}}) To{{.Name}}s() iter.Seq[{{.Type}}] {
 	return func(yield func({{.Type}}) bool ){
