@@ -30,34 +30,45 @@ func NewQuery(db common.Querier) *QueryRepository {
 
 // UserFiler represents the User filter.
 type Filter struct {
-  id *uuid.UUID
-  notid *uuid.UUID
-  gtid *uuid.UUID
-  ltid *uuid.UUID
-  gteqid *uuid.UUID
-  lteqid *uuid.UUID
-  ids []uuid.UUID
-  name *string
-  notname *string
-  gtname *string
-  ltname *string
-  gteqname *string
-  lteqname *string
-  names []string
-  email **string
-  notemail **string
-  gtemail **string
-  ltemail **string
-  gteqemail **string
-  lteqemail **string
-  emails []*string
-  balance *float64
-  notbalance *float64
-  gtbalance *float64
-  ltbalance *float64
-  gteqbalance *float64
-  lteqbalance *float64
-  balances []float64
+	id *uuid.UUID
+	notid *uuid.UUID
+	gtid *uuid.UUID
+	ltid *uuid.UUID
+	gteqid *uuid.UUID
+	lteqid *uuid.UUID
+	ids []uuid.UUID
+	idorderByAsc  *string
+	idorderByDesc *string
+	name *string
+	notname *string
+	gtname *string
+	ltname *string
+	gteqname *string
+	lteqname *string
+	names []string
+	nameorderByAsc  *string
+	nameorderByDesc *string
+	email **string
+	notemail **string
+	gtemail **string
+	ltemail **string
+	gteqemail **string
+	lteqemail **string
+	emails []*string
+	emailorderByAsc  *string
+	emailorderByDesc *string
+	balance *float64
+	notbalance *float64
+	gtbalance *float64
+	ltbalance *float64
+	gteqbalance *float64
+	lteqbalance *float64
+	balances []float64
+	balanceorderByAsc  *string
+	balanceorderByDesc *string
+	limit *int
+	offset *int
+
 }
 
 type FilterOpt func(f *Filter)
@@ -68,6 +79,17 @@ func NewFilter(opts ...FilterOpt) Filter{
 		opt(f)
 	}
 	return *f
+}
+
+func WithLimit(limit int)  FilterOpt {
+	return func(f *Filter) {
+		f.limit = &limit
+	}
+}
+func WithOffset(offset int)  FilterOpt {
+	return func(f *Filter) {
+		f.offset = &offset
+	}
 }
 func WithID(id uuid.UUID)  FilterOpt {
 	return func(f *Filter) {
@@ -102,6 +124,19 @@ func WithIDLowerOrEqualThen(id uuid.UUID)  FilterOpt {
 func WithIDs (ids ...uuid.UUID)  FilterOpt {
 	return func(f *Filter) {
 		f.ids = append(f.ids, ids...)
+	}
+}
+
+func WithOrderByIDAsc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "id ASC"
+		f.idorderByAsc =&column
+	}
+}
+func WithOrderByIDDesc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "id DESC"
+		f.idorderByDesc =&column
 	}
 }
 func WithName(name string)  FilterOpt {
@@ -139,6 +174,19 @@ func WithNames (names ...string)  FilterOpt {
 		f.names = append(f.names, names...)
 	}
 }
+
+func WithOrderByNameAsc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "name ASC"
+		f.nameorderByAsc =&column
+	}
+}
+func WithOrderByNameDesc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "name DESC"
+		f.nameorderByDesc =&column
+	}
+}
 func WithEmail(email *string)  FilterOpt {
 	return func(f *Filter) {
 		f.email = &email
@@ -172,6 +220,19 @@ func WithEmailLowerOrEqualThen(email *string)  FilterOpt {
 func WithEmails (emails ...*string)  FilterOpt {
 	return func(f *Filter) {
 		f.emails = append(f.emails, emails...)
+	}
+}
+
+func WithOrderByEmailAsc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "email ASC"
+		f.emailorderByAsc =&column
+	}
+}
+func WithOrderByEmailDesc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "email DESC"
+		f.emailorderByDesc =&column
 	}
 }
 func WithBalance(balance float64)  FilterOpt {
@@ -210,8 +271,24 @@ func WithBalances (balances ...float64)  FilterOpt {
 	}
 }
 
+func WithOrderByBalanceAsc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "balance ASC"
+		f.balanceorderByAsc =&column
+	}
+}
+func WithOrderByBalanceDesc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "balance DESC"
+		f.balanceorderByDesc =&column
+	}
+}
+
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
+	Limit(limit uint64) B
+	Offset(limit uint64) B
+	OrderBy(orderBys ...string) B
 }](b B,f Filter) B {
 	if f.id != nil {
       b = b.Where(sq.Eq{ColumnUserID: *f.id})
@@ -234,6 +311,12 @@ func ApplyWhere[B interface {
 	if f.ids != nil {
       b = b.Where(sq.Eq{ColumnUserID: f.ids})
     }
+	if f.idorderByAsc != nil {
+		b =b.OrderBy(*f.idorderByAsc)
+	}
+	if f.idorderByDesc != nil {
+		b =b.OrderBy(*f.idorderByDesc)
+	}
 	if f.name != nil {
       b = b.Where(sq.Eq{ColumnUserName: *f.name})
     }
@@ -255,6 +338,12 @@ func ApplyWhere[B interface {
 	if f.names != nil {
       b = b.Where(sq.Eq{ColumnUserName: f.names})
     }
+	if f.nameorderByAsc != nil {
+		b =b.OrderBy(*f.nameorderByAsc)
+	}
+	if f.nameorderByDesc != nil {
+		b =b.OrderBy(*f.nameorderByDesc)
+	}
 	if f.email != nil {
       b = b.Where(sq.Eq{ColumnUserEmail: *f.email})
     }
@@ -276,6 +365,12 @@ func ApplyWhere[B interface {
 	if f.emails != nil {
       b = b.Where(sq.Eq{ColumnUserEmail: f.emails})
     }
+	if f.emailorderByAsc != nil {
+		b =b.OrderBy(*f.emailorderByAsc)
+	}
+	if f.emailorderByDesc != nil {
+		b =b.OrderBy(*f.emailorderByDesc)
+	}
 	if f.balance != nil {
       b = b.Where(sq.Eq{ColumnUserBalance: *f.balance})
     }
@@ -297,6 +392,20 @@ func ApplyWhere[B interface {
 	if f.balances != nil {
       b = b.Where(sq.Eq{ColumnUserBalance: f.balances})
     }
+	if f.balanceorderByAsc != nil {
+		b =b.OrderBy(*f.balanceorderByAsc)
+	}
+	if f.balanceorderByDesc != nil {
+		b =b.OrderBy(*f.balanceorderByDesc)
+	}
+
+	if f.limit != nil {
+		b  = b.Limit(uint64(*f.limit))
+	}
+	if f.offset != nil {
+		b  = b.Offset(uint64(*f.offset))
+	}
+
   return b
 }
 

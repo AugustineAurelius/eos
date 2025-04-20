@@ -33,14 +33,19 @@ func NewQuery(db common.Querier) *QueryRepository {
 // {{.MessageName}}Filer represents the {{.MessageName}} filter.
 type Filter struct {
 {{- range .Fields }}
-  {{.Name | lower}} *{{.Type}}
-  not{{.Name | lower}} *{{.Type}}
-  gt{{.Name | lower}} *{{.Type}}
-  lt{{.Name | lower}} *{{.Type}}
-  gteq{{.Name | lower}} *{{.Type}}
-  lteq{{.Name | lower}} *{{.Type}}
-  {{.Name | lower}}s []{{.Type}}
+	{{.Name | lower}} *{{.Type}}
+	not{{.Name | lower}} *{{.Type}}
+	gt{{.Name | lower}} *{{.Type}}
+	lt{{.Name | lower}} *{{.Type}}
+	gteq{{.Name | lower}} *{{.Type}}
+	lteq{{.Name | lower}} *{{.Type}}
+	{{.Name | lower}}s []{{.Type}}
+	{{.Name | lower}}orderByAsc  *string
+	{{.Name | lower}}orderByDesc *string
 {{- end }}
+	limit *int
+	offset *int
+
 }
 
 type FilterOpt func(f *Filter)
@@ -53,6 +58,16 @@ func NewFilter(opts ...FilterOpt) Filter{
 	return *f
 }
 
+func WithLimit(limit int)  FilterOpt {
+	return func(f *Filter) {
+		f.limit = &limit
+	}
+}
+func WithOffset(offset int)  FilterOpt {
+	return func(f *Filter) {
+		f.offset = &offset
+	}
+}
 
 {{- range .Fields }}
 func With{{.Name}}({{.Name | lower}} {{.Type}})  FilterOpt {
@@ -90,10 +105,26 @@ func With{{.Name}}s ({{.Name | lower}}s ...{{.Type}})  FilterOpt {
 		f.{{.Name | lower}}s = append(f.{{.Name | lower}}s, {{.Name | lower}}s...)
 	}
 }
+
+func WithOrderBy{{.Name}}Asc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "{{.Column | snakeCase}} ASC"
+		f.{{.Name | lower}}orderByAsc =&column
+	}
+}
+func WithOrderBy{{.Name}}Desc()  FilterOpt {
+	return func(f *Filter) {
+		var column string = "{{.Column | snakeCase}} DESC"
+		f.{{.Name | lower}}orderByDesc =&column
+	}
+}
 {{- end }}
 
 func ApplyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
+	Limit(limit uint64) B
+	Offset(limit uint64) B
+	OrderBy(orderBys ...string) B
 }](b B,f Filter) B {
   {{- range .Fields }}
 	if f.{{.Name | lower}} != nil {
@@ -117,7 +148,21 @@ func ApplyWhere[B interface {
 	if f.{{.Name | lower}}s != nil {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: f.{{.Name | lower}}s})
     }
+	if f.{{.Name | lower}}orderByAsc != nil {
+		b =b.OrderBy(*f.{{.Name | lower}}orderByAsc)
+	}
+	if f.{{.Name | lower}}orderByDesc != nil {
+		b =b.OrderBy(*f.{{.Name | lower}}orderByDesc)
+	}
   {{- end }}
+
+	if f.limit != nil {
+		b  = b.Limit(uint64(*f.limit))
+	}
+	if f.offset != nil {
+		b  = b.Offset(uint64(*f.offset))
+	}
+
   return b
 }
 

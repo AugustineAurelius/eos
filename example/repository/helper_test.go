@@ -29,23 +29,19 @@ func Test_Iter(t *testing.T) {
 		Map(func(u User) User {
 			return u
 		}).
-		// FilterByEmail(&email).
 		Distinct(func(u User) any {
 			if u.Email != nil {
 				return *u.Email
 			}
 			return u.Email
-		}).Sort(func(x, y User) int {
-		if x.Balance < y.Balance {
-			return -1
-		} else if x.Balance > y.Balance {
-			return 1
+		})
+
+	var count int
+	for elem := range iter {
+		count++
+		if count == 2 {
+			break
 		}
-		return 0
-	})
-
-	for _, elem := range iter {
-
 		fmt.Println(elem)
 	}
 

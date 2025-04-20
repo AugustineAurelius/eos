@@ -273,15 +273,6 @@ func (i iterUser) FilterByBalance(balance float64) iterUser {
         }
 	}
 }
-func (i iterUser) ToIDs() iter.Seq[uuid.UUID] {
-	return func(yield func(uuid.UUID) bool ){
-	  for elem := range i {
-            if  !yield(elem.ID) {
-                return
-            }
-        }
-	}
-}
 func (i iterUser) ToNames() iter.Seq[string] {
 	return func(yield func(string) bool ){
 	  for elem := range i {

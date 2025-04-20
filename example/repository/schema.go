@@ -5,7 +5,6 @@ import (
     "github.com/google/uuid"
 )
 
-// Table and column name constants for User
 const (
 	TableUser = "users"
 	ColumnUserID = "id"
