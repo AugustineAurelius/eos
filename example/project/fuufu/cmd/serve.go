@@ -1,0 +1,69 @@
+package cmd
+
+import (
+	"net/http"
+
+	"github.com/AugustineAurelius/fuufu/config"
+	"github.com/AugustineAurelius/fuufu/pkg/common"
+	"github.com/AugustineAurelius/fuufu/pkg/logger"
+	"github.com/AugustineAurelius/fuufu/pkg/migration"
+	"github.com/spf13/cobra"
+)
+
+func createServeCMD(manager *config.Manager) *cobra.Command {
+	var debug, dev bool
+
+	serveCMD := &cobra.Command{
+		Use: "serve",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log := logger.NewWithManager(manager)
+
+			postgresMasterConfig := manager.LoadPostgres()
+			if err := migration.CheckMigrations(cmd.Context(), postgresMasterConfig); err != nil {
+				return err
+			}
+
+			log.Info("migrations checked")
+
+			pgMaster, err := common.NewPostgres(cmd.Context(), postgresMasterConfig, log)
+			if err != nil {
+				return err
+			}
+			if err = pgMaster.Pool.Ping(cmd.Context()); err != nil {
+				return err
+			}
+			log.Info("successfully conected to postgresMaster")
+
+			/*
+				define repositories:
+				exp:
+					todoRepository := todo_repository.NewCommand(&pgMaster)
+
+				define handlers:
+				exp:
+					todoHandlers := todo.NewStrictHandler(&server.TodoHandler{Repo:      todoRepository}, nil)
+
+					r := http.NewServeMux()
+					h := todo.HandlerFromMux(todoHandlers, r)
+					h = middleware.LoggingMiddleware(log, h)
+					s := &http.Server{
+						Handler: h,
+						Addr:    manager.LoadServer().Addr,
+					}
+			*/
+
+			r := http.NewServeMux()
+			s := &http.Server{
+				Handler: r,
+				Addr:    manager.LoadServer().Addr,
+			}
+
+			return s.ListenAndServe()
+		},
+	}
+
+	serveCMD.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug endpoints")
+	serveCMD.PersistentFlags().BoolVar(&dev, "dev", false, "Enable developer options")
+
+	return serveCMD
+}

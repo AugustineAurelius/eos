@@ -1,0 +1,13 @@
+package server
+
+import (
+	"context"
+
+)
+
+var _ api.StrictServerInterface = &Handler{}
+
+type Handler struct{}
+
+//prints all methods in stdout
+//go:generate go tool impl h*Handler api.StrictServerInterface

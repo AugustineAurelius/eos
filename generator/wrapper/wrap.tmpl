@@ -1,0 +1,128 @@
+package {{.PackageName}}
+
+import (
+	"context"
+	"time"
+	"go.uber.org/zap"
+	"go.opentelemetry.io/otel/trace"
+)
+
+type {{.Name}}Interface interface {
+	{{- range .Methods}}
+    {{.Name}}{{.Signature}}
+	{{- end}}
+}
+
+type {{.Name | firstToLower}}Core struct {
+	impl *{{.Name}}
+}
+
+{{range .Methods}}
+func (c *{{$.Name | firstToLower}}Core) {{.Name}}{{.Signature}} {
+	return c.impl.{{.Name}}({{ join .Params  ","}})
+}
+{{end}}
+
+// Main constructor
+func New{{.Name}}Middleware(impl *{{.Name}}, opts ...{{.Name}}Option) {{.Name}}Interface {
+	chain := {{.Name}}Interface(&{{.Name | firstToLower}}Core{impl})
+	for _, opt := range opts {
+		chain = opt(chain)
+	}
+	return chain
+}
+
+// Option
+type {{.Name}}Option func({{.Name}}Interface) {{.Name}}Interface
+
+//Logging
+type {{.Name | firstToLower}}LoggingMiddleware struct {
+	next   {{.Name}}Interface
+	logger *zap.Logger
+}
+
+func With{{.Name}}Logging(logger *zap.Logger) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}LoggingMiddleware{
+			next:   next,
+			logger: logger.With(zap.String("struct", "{{.Name}}")),
+		}
+	}
+}
+
+{{range .Methods}}
+func (m *{{$.Name | firstToLower}}LoggingMiddleware) {{.Name}}{{.Signature}} {
+    m.logger.Info("call {{.Name}}", 
+    {{- range .InputObjects -}}
+    {{- if eq .ZapType "Any"}}
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})
+    defer func() { m.logger.Info("method {{.Name}} call done", 
+    {{- range .OutputObjects}}
+    {{- if eq .ZapType  "Error" -}} 
+        zap.{{.ZapType}}({{.Name}}),
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})}()
+
+    return m.next.{{.Name}}({{ join .Params  ","}})
+}
+{{end}}
+
+// Tracing
+type {{.Name | firstToLower}}TracingMiddleware struct {
+	next   {{.Name}}Interface
+	tracer trace.Tracer
+}
+
+func With{{.Name | firstToLower}}Tracing(tracer trace.Tracer) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}TracingMiddleware{
+			next:   next,
+			tracer: tracer,
+		}
+	}
+}
+
+{{range .Methods}}
+func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
+	{{if .HasContext -}}
+	ctx, span := m.tracer.Start(ctx, "{{$.Name}}.{{.Name}}")
+	defer span.End()
+	{{else -}}
+	_, span := m.tracer.Start(context.Background(), "{{$.Name}}.{{.Name}}")
+	defer span.End()
+	{{end -}}
+
+	return m.next.{{.Name}}({{ join .Params  ","}})
+}
+{{end}}
+
+
+// Timeout
+type {{.Name | firstToLower}}TimeoutMiddleware struct {
+	{{.Name}}Interface
+	duration time.Duration
+}
+
+func With{{.Name | firstToLower}}Timeout(duration time.Duration) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}TimeoutMiddleware{
+			{{.Name}}Interface:   next,
+			duration: duration,
+		}
+	}
+}
+
+{{range .Methods}}
+{{if .HasContext -}}
+func (m *{{$.Name | firstToLower}}TimeoutMiddleware){{.Name}} {{.Signature}} {
+	ctx, cancel := context.WithTimeout(ctx, m.duration)
+	defer cancel()
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{end -}}
+{{end}}
