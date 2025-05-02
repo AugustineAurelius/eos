@@ -29,6 +29,8 @@ type method struct {
 	InputObjects  []obj
 	OutputObjects []obj
 	HasContext    bool
+	HasError      bool
+	ErrorParam    string
 }
 
 type obj struct {
@@ -79,6 +81,7 @@ func Generate(data StructData) error {
 		signature = fmt.Sprintf("(%s) (%s)", strings.Join(inputs, ","), strings.Join(outputs, ","))
 
 		if typeName == data.Name {
+			errorParam, hasError := hasErrorResult(fn.Type.Results)
 			data.Methods = append(data.Methods, method{
 				Name:          fn.Name.Name,
 				Signature:     signature,
@@ -87,6 +90,8 @@ func Generate(data StructData) error {
 				OutputObjects: formatToObjcets(fn.Type.Results),
 
 				HasContext: hasContextParam(fn.Type.Params),
+				HasError:   hasError,
+				ErrorParam: errorParam,
 			})
 
 		}
@@ -204,6 +209,21 @@ func hasContextParam(fl *ast.FieldList) bool {
 	}
 
 	return false
+}
+
+func hasErrorResult(fl *ast.FieldList) (string, bool) {
+	if fl == nil || len(fl.List) == 0 {
+		return "", false
+	}
+
+	for i, field := range fl.List {
+		if strings.Contains(exprToString(field.Type), "error") {
+			return fmt.Sprintf("param%d", i), true
+		}
+
+	}
+
+	return "", false
 }
 
 func generateFile(fileName, tmplPath string, data StructData) error {
