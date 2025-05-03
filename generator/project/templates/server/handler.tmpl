@@ -6,8 +6,5 @@ import (
 )
 
 var _ api.StrictServerInterface = &Handler{}
-
+//go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Handler
 type Handler struct{}
-
-//prints all methods in stdout
-//go:generate go tool impl h*Handler api.StrictServerInterface

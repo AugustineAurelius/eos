@@ -2,17 +2,31 @@ package cmd
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/AugustineAurelius/fuufu/api"
 	"github.com/AugustineAurelius/fuufu/config"
 	"github.com/AugustineAurelius/fuufu/pkg/common"
 	"github.com/AugustineAurelius/fuufu/pkg/logger"
+	"github.com/AugustineAurelius/fuufu/pkg/middleware"
 	"github.com/AugustineAurelius/fuufu/pkg/migration"
+	"github.com/AugustineAurelius/fuufu/repository"
+	"github.com/AugustineAurelius/fuufu/server"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.23.0"
+
 	"github.com/spf13/cobra"
 )
 
 func createServeCMD(manager *config.Manager) *cobra.Command {
 	var debug, dev bool
-
+	serviceName := semconv.ServiceNameKey.String("FUUFU")
+	name := "fuufu"
 	serveCMD := &cobra.Command{
 		Use: "serve",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -34,27 +48,65 @@ func createServeCMD(manager *config.Manager) *cobra.Command {
 			}
 			log.Info("successfully conected to postgresMaster")
 
-			/*
-				define repositories:
-				exp:
-					todoRepository := todo_repository.NewCommand(&pgMaster)
+			conn, err := initCollector(manager)
+			if err != nil {
 
-				define handlers:
-				exp:
-					todoHandlers := todo.NewStrictHandler(&server.TodoHandler{Repo:      todoRepository}, nil)
+				return err
+			}
 
-					r := http.NewServeMux()
-					h := todo.HandlerFromMux(todoHandlers, r)
-					h = middleware.LoggingMiddleware(log, h)
-					s := &http.Server{
-						Handler: h,
-						Addr:    manager.LoadServer().Addr,
-					}
-			*/
+			res, err := resource.New(cmd.Context(), resource.WithAttributes(serviceName))
+			if err != nil {
+				return err
+			}
+
+			shutdownTracerProvider, err := initTracerProvider(cmd.Context(), res, conn)
+			if err != nil {
+				return err
+			}
+
+			shutdownMetricProvider, err := initMeterProvider(cmd.Context(), res, conn)
+			if err != nil {
+				return err
+			}
+			defer func() {
+				shutdownTracerProvider(cmd.Context())
+				shutdownMetricProvider(cmd.Context())
+			}()
+
+			tracer := otel.Tracer(name)
+			meter := otel.Meter(name)
+
+			exporter, err := prometheus.New()
+			if err != nil {
+				panic(err)
+			}
+
+			// Set the global MeterProvider to the Prometheus exporter
+			meterProvider := metric.NewMeterProvider(
+				metric.WithReader(exporter),
+			)
+			otel.SetMeterProvider(meterProvider)
+			err = runtime.Start()
+			if err != nil {
+				return err
+			}
+			reg := prometheus.NewRegistry()
+			todoRepository := repository.NewCommand(&pgMaster)
+
+			handler := server.NewHandlerMiddleware(&server.Handler{Repo: todoRepository},
+				server.WithHandlerLogging(log),
+				server.WithHandlerMetrics(server.RegisterhandlerMetrics(reg)),
+				server.WithhandlerTimeout(time.Second*5),
+			)
+
+			todoHandlers := api.NewStrictHandler(handler, nil)
 
 			r := http.NewServeMux()
+			r.Handle("/metrics", promhttp.Handler())
+			h := api.HandlerFromMux(todoHandlers, r)
+			h = middleware.LoggingMiddleware(log, h)
 			s := &http.Server{
-				Handler: r,
+				Handler: h,
 				Addr:    manager.LoadServer().Addr,
 			}
 

@@ -4,20 +4,42 @@ import (
 	"context"
 
 	"github.com/AugustineAurelius/fuufu/api"
+	"github.com/AugustineAurelius/fuufu/repository"
 )
 
 var _ api.StrictServerInterface = &Handler{}
 
 //go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Handler
-type Handler struct{}
-
-//prints all methods in stdout
-//go:generate go tool impl h*Handler api.StrictServerInterface
+type Handler struct {
+	Repo *repository.CommandRepository
+}
 
 // Get Todo list
 // (GET /api/v1/todo)
 func (h *Handler) GetAllTodos(ctx context.Context, request api.GetAllTodosRequestObject) (api.GetAllTodosResponseObject, error) {
-	panic("not implemented") // TODO: Implement
+	todos, err := h.Repo.GetMany(ctx)
+	if err != nil {
+		return api.GetAllTodos500JSONResponse{
+			Error: err.Error(),
+		}, nil
+	}
+
+	result := make([]api.Task, 0, len(todos))
+	for _, task := range todos {
+		result = append(result, api.Task{
+			CreatedBy:   api.WeAll(task.CreatedBy),
+			Description: task.Description,
+			DoBefore:    *task.DoBefore,
+			Doer:        api.WeAll(task.Doer),
+			Done:        task.Done,
+			Id:          task.ID,
+			Name:        task.Name,
+			Range:       task.RepeatAfter,
+			Repeatable:  task.Repeatable,
+		})
+	}
+
+	return api.GetAllTodos200JSONResponse{Tasks: result}, nil
 }
 
 // Creates a new task

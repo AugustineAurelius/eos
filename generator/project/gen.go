@@ -35,6 +35,7 @@ func Generate(data ProjectData) error {
 	if err := generateFile("Makefile", "templates/make.tmpl", data); err != nil {
 		return err
 	}
+
 	//api
 	if err := generateFile("api/api.yaml", "templates/api/openapi.tmpl", data); err != nil {
 		return err
@@ -53,6 +54,7 @@ func Generate(data ProjectData) error {
 	if err := generateFile("cmd/migrate.go", "templates/cmd/migrate.tmpl", data); err != nil {
 		return err
 	}
+
 	//config
 	if err := generateFile("config/manager.go", "templates/config/manager.tmpl", data); err != nil {
 		return err
@@ -63,6 +65,7 @@ func Generate(data ProjectData) error {
 	if err := generateFile("config/config.go", "templates/config/config.tmpl", data); err != nil {
 		return err
 	}
+
 	//pkg
 	if err := generateFile("pkg/common/gen.go", "templates/pkg/common.tmpl", data); err != nil {
 		return err
@@ -76,6 +79,7 @@ func Generate(data ProjectData) error {
 	if err := generateFile("pkg/middleware/middlewares.go", "templates/pkg/middleware.tmpl", data); err != nil {
 		return err
 	}
+
 	//db
 	version := time.Now().UTC().Format("20060102150405")
 	filename := fmt.Sprintf("%v_%v", version, "init")
@@ -87,6 +91,10 @@ func Generate(data ProjectData) error {
 	if err := generateFile("server/handler.go", "templates/server/handler.tmpl", data); err != nil {
 		return err
 	}
+	//repository
+	if err := generateFile("repository/model.go", "templates/repository/model.tmpl", data); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -96,6 +104,7 @@ func createDirectories(fullPath string) {
 		"cmd",
 		"config",
 		"server",
+		"repository",
 		"pkg/migration",
 		"pkg/logger",
 		"pkg/common",
