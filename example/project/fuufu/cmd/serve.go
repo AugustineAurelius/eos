@@ -73,29 +73,29 @@ func createServeCMD(manager *config.Manager) *cobra.Command {
 				shutdownMetricProvider(cmd.Context())
 			}()
 
-			tracer := otel.Tracer(name)
-			meter := otel.Meter(name)
-
 			exporter, err := prometheus.New()
 			if err != nil {
 				panic(err)
 			}
 
-			// Set the global MeterProvider to the Prometheus exporter
 			meterProvider := metric.NewMeterProvider(
 				metric.WithReader(exporter),
 			)
 			otel.SetMeterProvider(meterProvider)
+
+			tracer := otel.Tracer(name)
+
 			err = runtime.Start()
 			if err != nil {
 				return err
 			}
-			reg := prometheus.NewRegistry()
+
 			todoRepository := repository.NewCommand(&pgMaster)
 
 			handler := server.NewHandlerMiddleware(&server.Handler{Repo: todoRepository},
 				server.WithHandlerLogging(log),
-				server.WithHandlerMetrics(server.RegisterhandlerMetrics(reg)),
+				server.WithHandlerOtelMetrics(server.RegisterHandlerOtelMetrics(meterProvider)),
+				server.WithhandlerTracing(tracer),
 				server.WithhandlerTimeout(time.Second*5),
 			)
 

@@ -7,6 +7,8 @@ import (
 
 	"github.com/AugustineAurelius/fuufu/api"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -66,29 +68,41 @@ func WithHandlerLogging(logger *zap.Logger) HandlerOption {
 }
 
 func (m *handlerLoggingMiddleware) GetAllTodos(ctx context.Context, request api.GetAllTodosRequestObject) (param0 api.GetAllTodosResponseObject, param1 error) {
+	start := time.Now()
 	m.logger.Info("call GetAllTodos")
-	defer func() { m.logger.Info("method GetAllTodos call done", zap.Any("param0", param0), zap.Error(param1)) }()
+	defer func() {
+		m.logger.Info("method GetAllTodos call done", zap.Duration("diration", time.Since(start)), zap.Any("param0", param0), zap.Error(param1))
+	}()
 
 	return m.next.GetAllTodos(ctx, request)
 }
 
 func (m *handlerLoggingMiddleware) CreateNewTask(ctx context.Context, request api.CreateNewTaskRequestObject) (param0 api.CreateNewTaskResponseObject, param1 error) {
+	start := time.Now()
 	m.logger.Info("call CreateNewTask")
-	defer func() { m.logger.Info("method CreateNewTask call done", zap.Any("param0", param0), zap.Error(param1)) }()
+	defer func() {
+		m.logger.Info("method CreateNewTask call done", zap.Duration("diration", time.Since(start)), zap.Any("param0", param0), zap.Error(param1))
+	}()
 
 	return m.next.CreateNewTask(ctx, request)
 }
 
 func (m *handlerLoggingMiddleware) DeleteTaskByID(ctx context.Context, request api.DeleteTaskByIDRequestObject) (param0 api.DeleteTaskByIDResponseObject, param1 error) {
+	start := time.Now()
 	m.logger.Info("call DeleteTaskByID")
-	defer func() { m.logger.Info("method DeleteTaskByID call done", zap.Any("param0", param0), zap.Error(param1)) }()
+	defer func() {
+		m.logger.Info("method DeleteTaskByID call done", zap.Duration("diration", time.Since(start)), zap.Any("param0", param0), zap.Error(param1))
+	}()
 
 	return m.next.DeleteTaskByID(ctx, request)
 }
 
 func (m *handlerLoggingMiddleware) GetTaskByID(ctx context.Context, request api.GetTaskByIDRequestObject) (param0 api.GetTaskByIDResponseObject, param1 error) {
+	start := time.Now()
 	m.logger.Info("call GetTaskByID")
-	defer func() { m.logger.Info("method GetTaskByID call done", zap.Any("param0", param0), zap.Error(param1)) }()
+	defer func() {
+		m.logger.Info("method GetTaskByID call done", zap.Duration("diration", time.Since(start)), zap.Any("param0", param0), zap.Error(param1))
+	}()
 
 	return m.next.GetTaskByID(ctx, request)
 }
@@ -138,6 +152,7 @@ type handlerTimeoutMiddleware struct {
 	duration time.Duration
 }
 
+// if method has context as param timeout would be applied
 func WithhandlerTimeout(duration time.Duration) HandlerOption {
 	return func(next HandlerInterface) HandlerInterface {
 		return &handlerTimeoutMiddleware{
@@ -171,6 +186,226 @@ func (m *handlerTimeoutMiddleware) GetTaskByID(ctx context.Context, request api.
 	return m.HandlerInterface.GetTaskByID(ctx, request)
 }
 
+type handlerOtelMetricsRegister struct {
+	meter    metric.Meter
+	Duration metric.Float64Histogram
+	Calls    metric.Int64Counter
+	Errors   metric.Int64Counter
+	InFlight metric.Int64UpDownCounter
+}
+
+func RegisterHandlerOtelMetrics(provider metric.MeterProvider) *handlerOtelMetricsRegister {
+	meter := provider.Meter("handler/metrics")
+
+	duration, _ := meter.Float64Histogram(
+		"handler_method_duration_seconds",
+		metric.WithDescription("Method execution time distribution"),
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
+	)
+
+	calls, _ := meter.Int64Counter(
+		"handler_method_calls_total",
+		metric.WithDescription("Total number of method calls"),
+	)
+
+	errors, _ := meter.Int64Counter(
+		"handler_method_errors_total",
+		metric.WithDescription("Total number of method errors"),
+	)
+
+	inflight, _ := meter.Int64UpDownCounter(
+		"handler_method_in_flight",
+		metric.WithDescription("Current number of executing methods"),
+	)
+
+	return &handlerOtelMetricsRegister{
+		meter:    meter,
+		Duration: duration,
+		Calls:    calls,
+		Errors:   errors,
+		InFlight: inflight,
+	}
+}
+
+type handlerOtelMetrics struct {
+	HandlerInterface
+	metrics *handlerOtelMetricsRegister
+}
+
+func WithHandlerOtelMetrics(metrics *handlerOtelMetricsRegister) HandlerOption {
+	return func(next HandlerInterface) HandlerInterface {
+		return &handlerOtelMetrics{
+			HandlerInterface: next,
+			metrics:          metrics,
+		}
+	}
+}
+
+func (m *handlerOtelMetrics) GetAllTodos(ctx context.Context, request api.GetAllTodosRequestObject) (param0 api.GetAllTodosResponseObject, param1 error) {
+	start := time.Now()
+	methodName := "GetAllTodos"
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("method", methodName),
+	}
+
+	// Track in-flight requests
+	m.metrics.InFlight.Add(ctx, 1)
+	defer m.metrics.InFlight.Add(ctx, -1)
+
+	// Increment call counter
+	m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
+
+		if param1 != nil {
+			errorType := param1.Error()
+			switch {
+			case errors.Is(param1, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is(param1, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+
+			errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+		}
+
+		if r := recover(); r != nil {
+			errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+			panic(r) // Re-throw panic after recording
+		}
+	}()
+
+	return m.HandlerInterface.GetAllTodos(ctx, request)
+}
+
+func (m *handlerOtelMetrics) CreateNewTask(ctx context.Context, request api.CreateNewTaskRequestObject) (param0 api.CreateNewTaskResponseObject, param1 error) {
+	start := time.Now()
+	methodName := "CreateNewTask"
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("method", methodName),
+	}
+
+	// Track in-flight requests
+	m.metrics.InFlight.Add(ctx, 1)
+	defer m.metrics.InFlight.Add(ctx, -1)
+
+	// Increment call counter
+	m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
+
+		if param1 != nil {
+			errorType := param1.Error()
+			switch {
+			case errors.Is(param1, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is(param1, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+
+			errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+		}
+
+		if r := recover(); r != nil {
+			errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+			panic(r) // Re-throw panic after recording
+		}
+	}()
+
+	return m.HandlerInterface.CreateNewTask(ctx, request)
+}
+
+func (m *handlerOtelMetrics) DeleteTaskByID(ctx context.Context, request api.DeleteTaskByIDRequestObject) (param0 api.DeleteTaskByIDResponseObject, param1 error) {
+	start := time.Now()
+	methodName := "DeleteTaskByID"
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("method", methodName),
+	}
+
+	// Track in-flight requests
+	m.metrics.InFlight.Add(ctx, 1)
+	defer m.metrics.InFlight.Add(ctx, -1)
+
+	// Increment call counter
+	m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
+
+		if param1 != nil {
+			errorType := param1.Error()
+			switch {
+			case errors.Is(param1, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is(param1, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+
+			errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+		}
+
+		if r := recover(); r != nil {
+			errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+			panic(r) // Re-throw panic after recording
+		}
+	}()
+
+	return m.HandlerInterface.DeleteTaskByID(ctx, request)
+}
+
+func (m *handlerOtelMetrics) GetTaskByID(ctx context.Context, request api.GetTaskByIDRequestObject) (param0 api.GetTaskByIDResponseObject, param1 error) {
+	start := time.Now()
+	methodName := "GetTaskByID"
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("method", methodName),
+	}
+
+	// Track in-flight requests
+	m.metrics.InFlight.Add(ctx, 1)
+	defer m.metrics.InFlight.Add(ctx, -1)
+
+	// Increment call counter
+	m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
+
+		if param1 != nil {
+			errorType := param1.Error()
+			switch {
+			case errors.Is(param1, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is(param1, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+
+			errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+		}
+
+		if r := recover(); r != nil {
+			errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+			panic(r) // Re-throw panic after recording
+		}
+	}()
+
+	return m.HandlerInterface.GetTaskByID(ctx, request)
+}
+
 type handlerMetrics struct {
 	Duration *prometheus.HistogramVec
 	Calls    *prometheus.CounterVec
@@ -178,7 +413,7 @@ type handlerMetrics struct {
 	InFlight prometheus.Gauge
 }
 
-func RegisterhandlerMetrics(registry prometheus.Registerer) *handlerMetrics {
+func RegisterHandlerMetrics(registry prometheus.Registerer) *handlerMetrics {
 	metrics := &handlerMetrics{
 		Duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "handler_method_duration_seconds",

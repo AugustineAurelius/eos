@@ -54,6 +54,9 @@ func Generate(data ProjectData) error {
 	if err := generateFile("cmd/migrate.go", "templates/cmd/migrate.tmpl", data); err != nil {
 		return err
 	}
+	if err := generateFile("cmd/helper.go", "templates/cmd/helper.tmpl", data); err != nil {
+		return err
+	}
 
 	//config
 	if err := generateFile("config/manager.go", "templates/config/manager.tmpl", data); err != nil {

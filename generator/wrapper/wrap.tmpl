@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+    "github.com/newrelic/go-agent/v3/newrelic"
 	"go.uber.org/zap"
 )
 
@@ -86,7 +87,7 @@ type {{.Name | firstToLower}}TracingMiddleware struct {
 	tracer trace.Tracer
 }
 
-func With{{.Name | firstToLower}}Tracing(tracer trace.Tracer) {{.Name}}Option {
+func With{{.Name}}Tracing(tracer trace.Tracer) {{.Name}}Option {
 	return func(next {{.Name}}Interface) {{.Name}}Interface {
 		return &{{.Name | firstToLower}}TracingMiddleware{
 			next:   next,
@@ -110,13 +111,47 @@ func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
 {{end}}
 
 
+type {{.Name | firstToLower}}NewRelicTracingMiddleware struct {
+	next        {{.Name}}Interface
+	newRelicApp *newrelic.Application
+}
+
+func With{{.Name}}NewRelicTracing(app *newrelic.Application) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}NewRelicTracingMiddleware{
+			next:        next,
+			newRelicApp: app,
+		}
+	}
+}
+
+{{range .Methods}}
+func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signature}} {
+	{{if .HasContext -}}
+	if txn := newrelic.FromContext(ctx); txn != nil {
+		seg := txn.StartSegment("{{$.Name}}.{{.Name}}")
+		defer seg.End()
+	} else {
+		txn := m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
+		defer txn.End()
+		ctx = newrelic.NewContext(ctx, txn)
+	}
+	{{else -}}
+	txn := m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
+	defer txn.End()
+	{{end -}}
+
+	return m.next.{{.Name}}({{ join .Params ","}})
+}
+{{end}}
+
 // Timeout
 type {{.Name | firstToLower}}TimeoutMiddleware struct {
 	{{.Name}}Interface
 	duration time.Duration
 }
 // if method has context as param timeout would be applied
-func With{{.Name | firstToLower}}Timeout(duration time.Duration) {{.Name}}Option {
+func With{{.Name }}Timeout(duration time.Duration) {{.Name}}Option {
 	return func(next {{.Name}}Interface) {{.Name}}Interface {
 		return &{{.Name | firstToLower}}TimeoutMiddleware{
 			{{.Name}}Interface:   next,

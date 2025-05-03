@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -97,7 +98,7 @@ type testTracingMiddleware struct {
 	tracer trace.Tracer
 }
 
-func WithtestTracing(tracer trace.Tracer) TestOption {
+func WithTestTracing(tracer trace.Tracer) TestOption {
 	return func(next TestInterface) TestInterface {
 		return &testTracingMiddleware{
 			next:   next,
@@ -124,6 +125,44 @@ func (m *testTracingMiddleware) Test3(ctx context.Context, a int, b float64) (pa
 	return m.next.Test3(ctx, a, b)
 }
 
+type testNewRelicTracingMiddleware struct {
+	next        TestInterface
+	newRelicApp *newrelic.Application
+}
+
+func WithTestNewRelicTracing(app *newrelic.Application) TestOption {
+	return func(next TestInterface) TestInterface {
+		return &testNewRelicTracingMiddleware{
+			next:        next,
+			newRelicApp: app,
+		}
+	}
+}
+
+func (m *testNewRelicTracingMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
+	txn := m.newRelicApp.StartTransaction("Test.Test1")
+	defer txn.End()
+	return m.next.Test1(a, b)
+}
+
+func (m *testNewRelicTracingMiddleware) Test2(a int, b float64) (param0 error) {
+	txn := m.newRelicApp.StartTransaction("Test.Test2")
+	defer txn.End()
+	return m.next.Test2(a, b)
+}
+
+func (m *testNewRelicTracingMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+	if txn := newrelic.FromContext(ctx); txn != nil {
+		seg := txn.StartSegment("Test.Test3")
+		defer seg.End()
+	} else {
+		txn := m.newRelicApp.StartTransaction("Test.Test3")
+		defer txn.End()
+		ctx = newrelic.NewContext(ctx, txn)
+	}
+	return m.next.Test3(ctx, a, b)
+}
+
 // Timeout
 type testTimeoutMiddleware struct {
 	TestInterface
@@ -131,7 +170,7 @@ type testTimeoutMiddleware struct {
 }
 
 // if method has context as param timeout would be applied
-func WithtestTimeout(duration time.Duration) TestOption {
+func WithTestTimeout(duration time.Duration) TestOption {
 	return func(next TestInterface) TestInterface {
 		return &testTimeoutMiddleware{
 			TestInterface: next,
