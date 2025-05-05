@@ -172,8 +172,8 @@ func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signat
 	}
 	{{end -}}
 
-	logger.Info("Method started")
-	defer logger.Info("Method completed")
+	logger.Info("Method  {{$.Name}}.{{.Name}} started")
+	defer logger.Info("Method {{$.Name}}.{{.Name}} completed")
 
 
 	return m.next.{{.Name}}({{ join .Params ","}})
