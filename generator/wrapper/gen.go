@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"unicode"
@@ -41,46 +42,66 @@ type obj struct {
 
 func Generate(data StructData) error {
 	filePath := os.Getenv("GOFILE")
+	pkgDir := filepath.Dir(filePath)
 
 	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, filePath, nil, parser.ParseComments)
+	pkgs, err := parser.ParseDir(fset, pkgDir, nil, parser.ParseComments)
 	if err != nil {
-		return fmt.Errorf("failed to parse Go file: %w", err)
+		return fmt.Errorf("failed to parse package directory: %w", err)
 	}
 
-	data.PackageName = node.Name.Name
+	var targetPkg *ast.Package
+	for pkgName, pkg := range pkgs {
+		if !strings.HasSuffix(pkgName, "_test") {
+			targetPkg = pkg
+			break
+		}
+	}
+	if targetPkg == nil {
+		return fmt.Errorf("no non-test package found in directory %s", pkgDir)
+	}
 
-	for _, decl := range node.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Recv == nil || len(fn.Recv.List) == 0 {
-			continue
-		}
-		r, size := utf8.DecodeRuneInString(fn.Name.Name)
-		if r == utf8.RuneError && size <= 1 {
-			continue
-		}
-		if unicode.IsLower(r) {
-			continue
-		}
-		recvType := fn.Recv.List[0].Type
-		var typeName string
-		switch rt := recvType.(type) {
-		case *ast.Ident:
-			typeName = rt.Name
-		case *ast.StarExpr:
-			if ident, ok := rt.X.(*ast.Ident); ok {
-				typeName = ident.Name
+	data.PackageName = targetPkg.Name
+
+	// Process all files in the package
+	for _, file := range targetPkg.Files {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || len(fn.Recv.List) == 0 {
+				continue
 			}
-		}
 
-		inputs := formatFieldList(fn.Type.Params)
-		outputs := formatFieldList(fn.Type.Results)
+			// Skip unexported methods
+			r, size := utf8.DecodeRuneInString(fn.Name.Name)
+			if r == utf8.RuneError && size <= 1 {
+				continue
+			}
+			if unicode.IsLower(r) {
+				continue
+			}
 
-		var signature string
+			// Extract receiver type (handling pointers)
+			recvType := fn.Recv.List[0].Type
+			var typeName string
+			switch rt := recvType.(type) {
+			case *ast.Ident:
+				typeName = rt.Name
+			case *ast.StarExpr:
+				if ident, ok := rt.X.(*ast.Ident); ok {
+					typeName = ident.Name
+				}
+			}
 
-		signature = fmt.Sprintf("(%s) (%s)", strings.Join(inputs, ","), strings.Join(outputs, ","))
+			// Skip if receiver doesn't match target struct
+			if typeName != data.Name {
+				continue
+			}
 
-		if typeName == data.Name {
+			// Build method signature and metadata
+			inputs := formatFieldList(fn.Type.Params)
+			outputs := formatFieldList(fn.Type.Results)
+			signature := fmt.Sprintf("(%s) (%s)", strings.Join(inputs, ","), strings.Join(outputs, ","))
+
 			errorParam, hasError := hasErrorResult(fn.Type.Results)
 			data.Methods = append(data.Methods, method{
 				Name:          fn.Name.Name,
@@ -88,15 +109,14 @@ func Generate(data StructData) error {
 				Params:        formatParamsFieldList(fn.Type.Params),
 				InputObjects:  formatToObjcets(fn.Type.Params),
 				OutputObjects: formatToObjcets(fn.Type.Results),
-
-				HasContext: hasContextParam(fn.Type.Params),
-				HasError:   hasError,
-				ErrorParam: errorParam,
+				HasContext:    hasContextParam(fn.Type.Params),
+				HasError:      hasError,
+				ErrorParam:    errorParam,
 			})
-
 		}
 	}
-	if err = generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
+
+	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
 		return err
 	}
 	return nil
