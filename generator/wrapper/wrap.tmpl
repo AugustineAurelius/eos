@@ -63,7 +63,7 @@ func (m *{{$.Name | firstToLower}}LoggingMiddleware) {{.Name}}{{.Signature}} {
     start := time.Now()
     m.logger.Info("call {{.Name}}", 
     {{- range .InputObjects -}}
-    {{- if eq .ZapType "Any"}}
+    {{- if eq .Type "context.Context"}}
     {{- else -}}
         zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
     {{- end}}
@@ -172,8 +172,21 @@ func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signat
 	}
 	{{end -}}
 
-	logger.Info("Method  {{$.Name}}.{{.Name}} started")
-	defer logger.Info("Method {{$.Name}}.{{.Name}} completed")
+    logger.Info("call {{$.Name}}{{.Name}}", 
+    {{- range .InputObjects -}}
+    {{- if eq .Type "context.Context"}}
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})
+    defer func() { logger.Info("method {{$.Name}}{{.Name}} call done",
+    {{- range .OutputObjects}}
+    {{- if eq .ZapType  "Error" -}} 
+        zap.{{.ZapType}}({{.Name}}),
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})}()
 
 
 	return m.next.{{.Name}}({{ join .Params ","}})
