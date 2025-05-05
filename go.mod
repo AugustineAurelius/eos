@@ -10,6 +10,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/newrelic/go-agent/v3 v3.38.0
+	github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap v1.2.2
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.10.0

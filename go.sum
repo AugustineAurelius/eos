@@ -108,6 +108,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/newrelic/go-agent/v3 v3.38.0 h1:Oms49R8NpCQ007UMm26dZq6qpHXGq/uDeyxlHEZFsnE=
 github.com/newrelic/go-agent/v3 v3.38.0/go.mod h1:4QXvru0vVy/iu7mfkNHT7T2+9TC9zPGO8aUEdKqY138=
+github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap v1.2.2 h1:UE7Skc7Hg+UAYRpc9dvGKP01RmvKIYXDdMxJfBRc+W4=
+github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap v1.2.2/go.mod h1:Mx6TbiHZEgM8j4E+8vamoQdSe6drpa7BoBoodHQqykg=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=

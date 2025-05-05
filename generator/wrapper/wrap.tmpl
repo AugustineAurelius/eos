@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-
+	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -114,32 +114,67 @@ func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
 type {{.Name | firstToLower}}NewRelicTracingMiddleware struct {
 	next        {{.Name}}Interface
 	newRelicApp *newrelic.Application
+	baseLogger  *zap.Logger
 }
 
-func With{{.Name}}NewRelicTracing(app *newrelic.Application) {{.Name}}Option {
+func With{{.Name }}NewRelicTracing(app *newrelic.Application, baseLogger *zap.Logger) {{.Name}}Option {
 	return func(next {{.Name}}Interface) {{.Name}}Interface {
 		return &{{.Name | firstToLower}}NewRelicTracingMiddleware{
 			next:        next,
 			newRelicApp: app,
+			baseLogger:  baseLogger,
 		}
 	}
 }
 
 {{range .Methods}}
 func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signature}} {
+	var logger *zap.Logger
 	{{if .HasContext -}}
-	if txn := newrelic.FromContext(ctx); txn != nil {
+	txn := newrelic.FromContext(ctx)
+	
+	if txn != nil {
+		txnCore, err := nrzap.WrapTransactionCore(m.baseLogger.Core(), txn)
+		if err == nil {
+			logger = zap.New(txnCore).With(zap.String("method", "{{$.Name}}.{{.Name}}"))
+		} else {
+			logger = m.baseLogger.With(zap.Error(err))
+		}
 		seg := txn.StartSegment("{{$.Name}}.{{.Name}}")
 		defer seg.End()
 	} else {
-		txn := m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
+		txn = m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
 		defer txn.End()
 		ctx = newrelic.NewContext(ctx, txn)
+		
+		bgCore, err := nrzap.WrapBackgroundCore(m.baseLogger.Core(), m.newRelicApp)
+		if err == nil {
+			logger = zap.New(bgCore).With(
+				zap.String("method", "{{$.Name}}.{{.Name}}"),
+				zap.String("transactionType", "background"),
+			)
+		} else {
+			logger = m.baseLogger.With(zap.Error(err))
+		}
 	}
 	{{else -}}
 	txn := m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
 	defer txn.End()
+	
+	bgCore, err := nrzap.WrapBackgroundCore(m.baseLogger.Core(), m.newRelicApp)
+	if err == nil {
+		logger = zap.New(bgCore).With(
+			zap.String("method", "{{$.Name}}.{{.Name}}"),
+			zap.String("transactionType", "background"),
+		)
+	} else {
+		logger = m.baseLogger.With(zap.Error(err))
+	}
 	{{end -}}
+
+	logger.Info("Method started")
+	defer logger.Info("Method completed")
+
 
 	return m.next.{{.Name}}({{ join .Params ","}})
 }

@@ -2,7 +2,6 @@ package wrap_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/AugustineAurelius/eos/example/wrap"
 	"github.com/stretchr/testify/require"
@@ -37,8 +36,10 @@ func TestTest1(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	wrappedTest := wrap.NewTestMiddleware(&wrap.Test{}, wrap.WithTestLogging(logger), wrap.WithTestTimeout(time.Second))
+
+	wrappedTest := wrap.NewTestMiddleware(&wrap.Test{}, wrap.WithTestLogging(logger))
 	res, err := wrappedTest.Test1(1, 12.2)
 	require.NoError(t, err)
 	require.Equal(t, 13, res)
+
 }
