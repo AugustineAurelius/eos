@@ -63,7 +63,6 @@ func Generate(data StructData) error {
 
 	data.PackageName = targetPkg.Name
 
-	// Process all files in the package
 	for _, file := range targetPkg.Files {
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
@@ -80,7 +79,6 @@ func Generate(data StructData) error {
 				continue
 			}
 
-			// Extract receiver type (handling pointers)
 			recvType := fn.Recv.List[0].Type
 			var typeName string
 			switch rt := recvType.(type) {
@@ -92,12 +90,10 @@ func Generate(data StructData) error {
 				}
 			}
 
-			// Skip if receiver doesn't match target struct
 			if typeName != data.Name {
 				continue
 			}
 
-			// Build method signature and metadata
 			inputs := formatFieldList(fn.Type.Params)
 			outputs := formatFieldList(fn.Type.Results)
 			signature := fmt.Sprintf("(%s) (%s)", strings.Join(inputs, ","), strings.Join(outputs, ","))
