@@ -27,6 +27,7 @@ type method struct {
 	Name          string
 	Signature     string
 	Params        []string
+	Results       []string
 	InputObjects  []obj
 	OutputObjects []obj
 	HasContext    bool
@@ -103,6 +104,7 @@ func Generate(data StructData) error {
 				Name:          fn.Name.Name,
 				Signature:     signature,
 				Params:        formatParamsFieldList(fn.Type.Params),
+				Results:       formatResultsFieldList(fn.Type.Results),
 				InputObjects:  formatToObjcets(fn.Type.Params),
 				OutputObjects: formatToObjcets(fn.Type.Results),
 				HasContext:    hasContextParam(fn.Type.Params),

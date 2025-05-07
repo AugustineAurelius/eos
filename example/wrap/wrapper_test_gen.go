@@ -3,6 +3,8 @@ package wrap
 import (
 	"context"
 	"errors"
+	"math"
+	"math/rand"
 	"time"
 
 	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
@@ -15,18 +17,14 @@ import (
 )
 
 type TestInterface interface {
-	Test4(ctx context.Context, a int, b float64) (param0 error)
 	Test1(a int, b float64) (param0 int, param1 error)
 	Test2(a int, b float64) (param0 error)
 	Test3(ctx context.Context, a int, b float64) (param0 error)
+	Test4(ctx context.Context, a int, b float64) (param0 error)
 }
 
 type testCore struct {
 	impl *Test
-}
-
-func (c *testCore) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	return c.impl.Test4(ctx, a, b)
 }
 
 func (c *testCore) Test1(a int, b float64) (param0 int, param1 error) {
@@ -39,6 +37,10 @@ func (c *testCore) Test2(a int, b float64) (param0 error) {
 
 func (c *testCore) Test3(ctx context.Context, a int, b float64) (param0 error) {
 	return c.impl.Test3(ctx, a, b)
+}
+
+func (c *testCore) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	return c.impl.Test4(ctx, a, b)
 }
 
 // Main constructor
@@ -66,16 +68,6 @@ func WithTestLogging(logger *zap.Logger) TestOption {
 			logger: logger.With(zap.String("struct", "Test")),
 		}
 	}
-}
-
-func (m *testLoggingMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	start := time.Now()
-	m.logger.Info("call Test4", zap.Int("a", a), zap.Float64("b", b))
-	defer func() {
-		m.logger.Info("method Test4 call done", zap.Duration("diration", time.Since(start)), zap.Error(param0))
-	}()
-
-	return m.next.Test4(ctx, a, b)
 }
 
 func (m *testLoggingMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
@@ -108,6 +100,16 @@ func (m *testLoggingMiddleware) Test3(ctx context.Context, a int, b float64) (pa
 	return m.next.Test3(ctx, a, b)
 }
 
+func (m *testLoggingMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	start := time.Now()
+	m.logger.Info("call Test4", zap.Int("a", a), zap.Float64("b", b))
+	defer func() {
+		m.logger.Info("method Test4 call done", zap.Duration("diration", time.Since(start)), zap.Error(param0))
+	}()
+
+	return m.next.Test4(ctx, a, b)
+}
+
 // Tracing
 type testTracingMiddleware struct {
 	next   TestInterface
@@ -121,12 +123,6 @@ func WithTestTracing(tracer trace.Tracer) TestOption {
 			tracer: tracer,
 		}
 	}
-}
-
-func (m *testTracingMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	ctx, span := m.tracer.Start(ctx, "Test.Test4")
-	defer span.End()
-	return m.next.Test4(ctx, a, b)
 }
 
 func (m *testTracingMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
@@ -147,6 +143,12 @@ func (m *testTracingMiddleware) Test3(ctx context.Context, a int, b float64) (pa
 	return m.next.Test3(ctx, a, b)
 }
 
+func (m *testTracingMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	ctx, span := m.tracer.Start(ctx, "Test.Test4")
+	defer span.End()
+	return m.next.Test4(ctx, a, b)
+}
+
 type testNewRelicTracingMiddleware struct {
 	next        TestInterface
 	newRelicApp *newrelic.Application
@@ -161,40 +163,6 @@ func WithTestNewRelicTracing(app *newrelic.Application, baseLogger *zap.Logger) 
 			baseLogger:  baseLogger,
 		}
 	}
-}
-
-func (m *testNewRelicTracingMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	var logger *zap.Logger
-	txn := newrelic.FromContext(ctx)
-
-	if txn != nil {
-		txnCore, err := nrzap.WrapTransactionCore(m.baseLogger.Core(), txn)
-		if err == nil {
-			logger = zap.New(txnCore).With(zap.String("method", "Test.Test4"))
-		} else {
-			logger = m.baseLogger.With(zap.Error(err))
-		}
-		seg := txn.StartSegment("Test.Test4")
-		defer seg.End()
-	} else {
-		txn = m.newRelicApp.StartTransaction("Test.Test4")
-		defer txn.End()
-		ctx = newrelic.NewContext(ctx, txn)
-
-		bgCore, err := nrzap.WrapBackgroundCore(m.baseLogger.Core(), m.newRelicApp)
-		if err == nil {
-			logger = zap.New(bgCore).With(
-				zap.String("method", "Test.Test4"),
-				zap.String("transactionType", "background"),
-			)
-		} else {
-			logger = m.baseLogger.With(zap.Error(err))
-		}
-	}
-	logger.Info("call TestTest4", zap.Int("a", a), zap.Float64("b", b))
-	defer func() { logger.Info("method TestTest4 call done", zap.Error(param0)) }()
-
-	return m.next.Test4(ctx, a, b)
 }
 
 func (m *testNewRelicTracingMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
@@ -271,6 +239,40 @@ func (m *testNewRelicTracingMiddleware) Test3(ctx context.Context, a int, b floa
 	return m.next.Test3(ctx, a, b)
 }
 
+func (m *testNewRelicTracingMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	var logger *zap.Logger
+	txn := newrelic.FromContext(ctx)
+
+	if txn != nil {
+		txnCore, err := nrzap.WrapTransactionCore(m.baseLogger.Core(), txn)
+		if err == nil {
+			logger = zap.New(txnCore).With(zap.String("method", "Test.Test4"))
+		} else {
+			logger = m.baseLogger.With(zap.Error(err))
+		}
+		seg := txn.StartSegment("Test.Test4")
+		defer seg.End()
+	} else {
+		txn = m.newRelicApp.StartTransaction("Test.Test4")
+		defer txn.End()
+		ctx = newrelic.NewContext(ctx, txn)
+
+		bgCore, err := nrzap.WrapBackgroundCore(m.baseLogger.Core(), m.newRelicApp)
+		if err == nil {
+			logger = zap.New(bgCore).With(
+				zap.String("method", "Test.Test4"),
+				zap.String("transactionType", "background"),
+			)
+		} else {
+			logger = m.baseLogger.With(zap.Error(err))
+		}
+	}
+	logger.Info("call TestTest4", zap.Int("a", a), zap.Float64("b", b))
+	defer func() { logger.Info("method TestTest4 call done", zap.Error(param0)) }()
+
+	return m.next.Test4(ctx, a, b)
+}
+
 // Timeout
 type testTimeoutMiddleware struct {
 	TestInterface
@@ -287,16 +289,16 @@ func WithTestTimeout(duration time.Duration) TestOption {
 	}
 }
 
-func (m *testTimeoutMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	ctx, cancel := context.WithTimeout(ctx, m.duration)
-	defer cancel()
-	return m.TestInterface.Test4(ctx, a, b)
-}
-
 func (m *testTimeoutMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
 	ctx, cancel := context.WithTimeout(ctx, m.duration)
 	defer cancel()
 	return m.TestInterface.Test3(ctx, a, b)
+}
+
+func (m *testTimeoutMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	ctx, cancel := context.WithTimeout(ctx, m.duration)
+	defer cancel()
+	return m.TestInterface.Test4(ctx, a, b)
 }
 
 type testOtelMetricsRegister struct {
@@ -355,47 +357,6 @@ func WithTestOtelMetrics(metrics *testOtelMetricsRegister) TestOption {
 	}
 }
 
-func (m *testOtelMetrics) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	start := time.Now()
-	methodName := "Test4"
-	commonAttrs := []attribute.KeyValue{
-		attribute.String("method", methodName),
-	}
-
-	// Track in-flight requests
-	m.metrics.InFlight.Add(ctx, 1)
-	defer m.metrics.InFlight.Add(ctx, -1)
-
-	// Increment call counter
-	m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
-
-	defer func() {
-		duration := time.Since(start).Seconds()
-		m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
-
-		if param0 != nil {
-			errorType := param0.Error()
-			switch {
-			case errors.Is(param0, context.Canceled):
-				errorType = "context_canceled"
-			case errors.Is(param0, context.DeadlineExceeded):
-				errorType = "timeout"
-			}
-
-			errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
-			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
-		}
-
-		if r := recover(); r != nil {
-			errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
-			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
-			panic(r) // Re-throw panic after recording
-		}
-	}()
-
-	return m.TestInterface.Test4(ctx, a, b)
-}
-
 func (m *testOtelMetrics) Test3(ctx context.Context, a int, b float64) (param0 error) {
 	start := time.Now()
 	methodName := "Test3"
@@ -435,6 +396,47 @@ func (m *testOtelMetrics) Test3(ctx context.Context, a int, b float64) (param0 e
 	}()
 
 	return m.TestInterface.Test3(ctx, a, b)
+}
+
+func (m *testOtelMetrics) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	start := time.Now()
+	methodName := "Test4"
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("method", methodName),
+	}
+
+	// Track in-flight requests
+	m.metrics.InFlight.Add(ctx, 1)
+	defer m.metrics.InFlight.Add(ctx, -1)
+
+	// Increment call counter
+	m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
+
+		if param0 != nil {
+			errorType := param0.Error()
+			switch {
+			case errors.Is(param0, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is(param0, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+
+			errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+		}
+
+		if r := recover(); r != nil {
+			errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
+			m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+			panic(r) // Re-throw panic after recording
+		}
+	}()
+
+	return m.TestInterface.Test4(ctx, a, b)
 }
 
 type testMetrics struct {
@@ -490,34 +492,6 @@ func WithTestMetrics(metrics *testMetrics) TestOption {
 			metrics: metrics,
 		}
 	}
-}
-
-func (m *testMetricsMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	start := time.Now()
-	methodName := "Test4"
-
-	m.metrics.InFlight.Inc()
-	defer m.metrics.InFlight.Dec()
-	m.metrics.Calls.WithLabelValues(methodName).Inc()
-
-	defer func() {
-		duration := time.Since(start).Seconds()
-		m.metrics.Duration.WithLabelValues(methodName).Observe(duration)
-		if param0 != nil {
-			errorType := param0.Error()
-			switch {
-			case errors.Is(param0, context.Canceled):
-				errorType = "context_canceled"
-			case errors.Is(param0, context.DeadlineExceeded):
-				errorType = "timeout"
-			}
-			m.metrics.Errors.WithLabelValues(methodName, errorType).Inc()
-		}
-		if r := recover(); r != nil {
-			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
-		}
-	}()
-	return m.next.Test4(ctx, a, b)
 }
 
 func (m *testMetricsMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
@@ -602,4 +576,224 @@ func (m *testMetricsMiddleware) Test3(ctx context.Context, a int, b float64) (pa
 		}
 	}()
 	return m.next.Test3(ctx, a, b)
+}
+
+func (m *testMetricsMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	start := time.Now()
+	methodName := "Test4"
+
+	m.metrics.InFlight.Inc()
+	defer m.metrics.InFlight.Dec()
+	m.metrics.Calls.WithLabelValues(methodName).Inc()
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.metrics.Duration.WithLabelValues(methodName).Observe(duration)
+		if param0 != nil {
+			errorType := param0.Error()
+			switch {
+			case errors.Is(param0, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is(param0, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+			m.metrics.Errors.WithLabelValues(methodName, errorType).Inc()
+		}
+		if r := recover(); r != nil {
+			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
+		}
+	}()
+	return m.next.Test4(ctx, a, b)
+}
+
+type testRetryMiddleware struct {
+	TestInterface
+	retryConfig *retryConfig
+}
+type retryConfig struct {
+	timeout *time.Duration
+	//default 100 ms
+	delay time.Duration
+	//default 5 s
+	maxDelay time.Duration
+	// default 5 attempts
+	attempts int
+	// if false -> stop retry default return always true
+	shouldRetryAfter func(error) bool
+}
+type retryOpt func(*retryConfig)
+
+func NewRetryConfig(opts ...retryOpt) *retryConfig {
+	cfg := &retryConfig{
+		timeout:          nil,
+		delay:            100 * time.Millisecond,
+		maxDelay:         5 * time.Second,
+		attempts:         5,
+		shouldRetryAfter: func(err error) bool { return true },
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return cfg
+}
+
+func RetryWithAttempts(attempts int) retryOpt {
+	return func(rc *retryConfig) {
+		rc.attempts = attempts
+	}
+}
+func RetryWithDelay(delay time.Duration) retryOpt {
+	return func(rc *retryConfig) {
+		rc.delay = delay
+	}
+}
+func RetryWithMaximumDelay(maxDelay time.Duration) retryOpt {
+	return func(rc *retryConfig) {
+		rc.maxDelay = maxDelay
+	}
+}
+func RetryWithTimeout(timeout time.Duration) retryOpt {
+	return func(rc *retryConfig) {
+		rc.timeout = &timeout
+	}
+}
+func RetryWithShouldRetryAfter(shouldRetryAfter func(error) bool) retryOpt {
+	return func(rc *retryConfig) {
+		rc.shouldRetryAfter = shouldRetryAfter
+	}
+}
+
+func WithTestRetry(cfg *retryConfig) TestOption {
+	return func(next TestInterface) TestInterface {
+		return &testRetryMiddleware{
+			TestInterface: next,
+			retryConfig:   cfg,
+		}
+	}
+}
+
+func (m *testRetryMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
+	for attempt := 0; attempt < m.retryConfig.attempts; attempt++ {
+
+		param0, param1 = m.TestInterface.Test1(a, b)
+		if param1 == nil {
+			return
+		}
+
+		if !m.retryConfig.shouldRetryAfter(param1) {
+			return
+		}
+
+		if attempt == m.retryConfig.attempts-1 {
+			return
+		}
+
+		backoff := m.retryConfig.delay * time.Duration(math.Pow(2, float64(attempt)))
+		if backoff > m.retryConfig.maxDelay {
+			backoff = m.retryConfig.maxDelay
+		}
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+
+		time.Sleep(jitter)
+	}
+	return
+}
+
+func (m *testRetryMiddleware) Test2(a int, b float64) (param0 error) {
+	for attempt := 0; attempt < m.retryConfig.attempts; attempt++ {
+
+		param0 = m.TestInterface.Test2(a, b)
+		if param0 == nil {
+			return
+		}
+
+		if !m.retryConfig.shouldRetryAfter(param0) {
+			return
+		}
+
+		if attempt == m.retryConfig.attempts-1 {
+			return
+		}
+
+		backoff := m.retryConfig.delay * time.Duration(math.Pow(2, float64(attempt)))
+		if backoff > m.retryConfig.maxDelay {
+			backoff = m.retryConfig.maxDelay
+		}
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+
+		time.Sleep(jitter)
+	}
+	return
+}
+
+func (m *testRetryMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+	var cancel context.CancelFunc
+	if _, ok := ctx.Deadline(); !ok && m.retryConfig.timeout != nil {
+		ctx, cancel = context.WithTimeout(ctx, *m.retryConfig.timeout)
+		defer cancel()
+	}
+	for attempt := 0; attempt < m.retryConfig.attempts; attempt++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		param0 = m.TestInterface.Test3(ctx, a, b)
+		if param0 == nil {
+			return
+		}
+
+		if !m.retryConfig.shouldRetryAfter(param0) {
+			return
+		}
+
+		if attempt == m.retryConfig.attempts-1 {
+			return
+		}
+
+		backoff := m.retryConfig.delay * time.Duration(math.Pow(2, float64(attempt)))
+		if backoff > m.retryConfig.maxDelay {
+			backoff = m.retryConfig.maxDelay
+		}
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+
+		time.Sleep(jitter)
+	}
+	return
+}
+
+func (m *testRetryMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	var cancel context.CancelFunc
+	if _, ok := ctx.Deadline(); !ok && m.retryConfig.timeout != nil {
+		ctx, cancel = context.WithTimeout(ctx, *m.retryConfig.timeout)
+		defer cancel()
+	}
+	for attempt := 0; attempt < m.retryConfig.attempts; attempt++ {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		param0 = m.TestInterface.Test4(ctx, a, b)
+		if param0 == nil {
+			return
+		}
+
+		if !m.retryConfig.shouldRetryAfter(param0) {
+			return
+		}
+
+		if attempt == m.retryConfig.attempts-1 {
+			return
+		}
+
+		backoff := m.retryConfig.delay * time.Duration(math.Pow(2, float64(attempt)))
+		if backoff > m.retryConfig.maxDelay {
+			backoff = m.retryConfig.maxDelay
+		}
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+
+		time.Sleep(jitter)
+	}
+	return
 }
