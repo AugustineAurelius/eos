@@ -3,16 +3,17 @@ package {{.PackageName}}
 import (
 	"context"
 	"errors"
-	"time"
 	"math"
 	"math/rand"
+	"sync"
+	"time"
 
 	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-    "github.com/newrelic/go-agent/v3/newrelic"
 	"go.uber.org/zap"
 )
 
@@ -418,6 +419,7 @@ type {{.Name | firstToLower}}RetryMiddleware struct {
 	{{.Name}}Interface
 	retryConfig *retryConfig
 }
+
 type retryConfig struct {
 	timeout *time.Duration
 	//default 100 ms
@@ -529,3 +531,105 @@ func (m *{{$.Name | firstToLower}}RetryMiddleware) {{.Name}} {{.Signature}}{
 
 {{end}}
 
+
+
+var ErrOpenCircuitBreaker = errors.New("{{.Name}}CircuitBreaker: circuit is open")
+
+type {{.Name | firstToLower}}CircuitBreakerMiddleware struct {
+	{{.Name}}Interface
+
+	mu                 sync.RWMutex
+	currentAmountOfErrors    int
+	openedAt             *time.Time
+    cfg                 *circuitBreakerConfig 
+}
+
+type circuitBreakerConfig struct {
+    // default 5
+	errorsAmountToOpen   int 
+    // default 5 s
+    openInterval         time.Duration
+	// if false -> error not counts
+	shouldCountAfter func(error) bool
+}
+type circuitBreakerOpt func(*circuitBreakerConfig)
+
+func NewCircuitBreakerConfig(opts ...circuitBreakerOpt) *circuitBreakerConfig {
+	cfg := &circuitBreakerConfig{
+        errorsAmountToOpen: 5,
+        openInterval: 5*time.Second,
+		shouldCountAfter:  func(err error) bool { return true },
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return cfg
+}
+
+func CircuitBreakerWithOpenInterval(openInterval time.Duration) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.openInterval = openInterval
+	}
+}
+func CircuitBreakerWithErrorsAmountToOpen(errorsAmountToOpen int) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.errorsAmountToOpen = errorsAmountToOpen
+	}
+}
+func CircuitBreakerWithShouldCountAfter(shouldCountAfter func(error) bool) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.shouldCountAfter = shouldCountAfter
+	}
+}
+
+
+func With{{.Name}}CircuitBreaker(cfg *circuitBreakerConfig) {{.Name}}Option  {
+    return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}CircuitBreakerMiddleware{
+			{{.Name}}Interface:        next,
+			cfg: cfg,
+		}
+	}
+}
+{{range .Methods}}
+
+{{- if .HasError}}
+func (m *{{$.Name | firstToLower}}CircuitBreakerMiddleware)  {{.Name}} {{.Signature}} {
+	m.mu.RLock()
+
+	if m.openedAt != nil && m.openedAt.After(time.Now()) {
+		m.mu.RUnlock()
+		{{.ErrorParam}} = ErrOpenCircuitBreaker
+		return
+	}
+	m.mu.RUnlock()
+
+	{{join  .Results ","}} = m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if {{.ErrorParam}} == nil {
+		m.currentAmountOfErrors = 0
+		m.openedAt = nil
+		return
+	}
+
+
+    if !m.cfg.shouldCountAfter({{.ErrorParam}}) {
+        return
+    }
+
+	m.currentAmountOfErrors++
+
+	if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+	}
+
+	return
+}
+{{- end}}
+
+{{end}}

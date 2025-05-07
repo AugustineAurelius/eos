@@ -5,6 +5,7 @@ import (
 	"errors"
 	"math"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
@@ -610,6 +611,7 @@ type testRetryMiddleware struct {
 	TestInterface
 	retryConfig *retryConfig
 }
+
 type retryConfig struct {
 	timeout *time.Duration
 	//default 100 ms
@@ -795,5 +797,201 @@ func (m *testRetryMiddleware) Test4(ctx context.Context, a int, b float64) (para
 
 		time.Sleep(jitter)
 	}
+	return
+}
+
+var ErrOpenCircuitBreaker = errors.New("TestCircuitBreaker: circuit is open")
+
+type testCircuitBreakerMiddleware struct {
+	TestInterface
+
+	mu                    sync.RWMutex
+	currentAmountOfErrors int
+	openedAt              *time.Time
+	cfg                   *circuitBreakerConfig
+}
+
+type circuitBreakerConfig struct {
+	// default 5
+	errorsAmountToOpen int
+	// default 5 s
+	openInterval time.Duration
+	// if false -> error not counts
+	shouldCountAfter func(error) bool
+}
+type circuitBreakerOpt func(*circuitBreakerConfig)
+
+func NewCircuitBreakerConfig(opts ...circuitBreakerOpt) *circuitBreakerConfig {
+	cfg := &circuitBreakerConfig{
+		errorsAmountToOpen: 5,
+		openInterval:       5 * time.Second,
+		shouldCountAfter:   func(err error) bool { return true },
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return cfg
+}
+
+func CircuitBreakerWithOpenInterval(openInterval time.Duration) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.openInterval = openInterval
+	}
+}
+func CircuitBreakerWithErrorsAmountToOpen(errorsAmountToOpen int) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.errorsAmountToOpen = errorsAmountToOpen
+	}
+}
+func CircuitBreakerWithShouldCountAfter(shouldCountAfter func(error) bool) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.shouldCountAfter = shouldCountAfter
+	}
+}
+
+func WithTestCircuitBreaker(cfg *circuitBreakerConfig) TestOption {
+	return func(next TestInterface) TestInterface {
+		return &testCircuitBreakerMiddleware{
+			TestInterface: next,
+			cfg:           cfg,
+		}
+	}
+}
+
+func (m *testCircuitBreakerMiddleware) Test1(a int, b float64) (param0 int, param1 error) {
+	m.mu.RLock()
+
+	if m.openedAt != nil && m.openedAt.After(time.Now()) {
+		m.mu.RUnlock()
+		param1 = ErrOpenCircuitBreaker
+		return
+	}
+	m.mu.RUnlock()
+
+	param0, param1 = m.TestInterface.Test1(a, b)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if param1 == nil {
+		m.currentAmountOfErrors = 0
+		m.openedAt = nil
+		return
+	}
+
+	if !m.cfg.shouldCountAfter(param1) {
+		return
+	}
+
+	m.currentAmountOfErrors++
+
+	if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+	}
+
+	return
+}
+
+func (m *testCircuitBreakerMiddleware) Test2(a int, b float64) (param0 error) {
+	m.mu.RLock()
+
+	if m.openedAt != nil && m.openedAt.After(time.Now()) {
+		m.mu.RUnlock()
+		param0 = ErrOpenCircuitBreaker
+		return
+	}
+	m.mu.RUnlock()
+
+	param0 = m.TestInterface.Test2(a, b)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if param0 == nil {
+		m.currentAmountOfErrors = 0
+		m.openedAt = nil
+		return
+	}
+
+	if !m.cfg.shouldCountAfter(param0) {
+		return
+	}
+
+	m.currentAmountOfErrors++
+
+	if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+	}
+
+	return
+}
+
+func (m *testCircuitBreakerMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+	m.mu.RLock()
+
+	if m.openedAt != nil && m.openedAt.After(time.Now()) {
+		m.mu.RUnlock()
+		param0 = ErrOpenCircuitBreaker
+		return
+	}
+	m.mu.RUnlock()
+
+	param0 = m.TestInterface.Test3(ctx, a, b)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if param0 == nil {
+		m.currentAmountOfErrors = 0
+		m.openedAt = nil
+		return
+	}
+
+	if !m.cfg.shouldCountAfter(param0) {
+		return
+	}
+
+	m.currentAmountOfErrors++
+
+	if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+	}
+
+	return
+}
+
+func (m *testCircuitBreakerMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	m.mu.RLock()
+
+	if m.openedAt != nil && m.openedAt.After(time.Now()) {
+		m.mu.RUnlock()
+		param0 = ErrOpenCircuitBreaker
+		return
+	}
+	m.mu.RUnlock()
+
+	param0 = m.TestInterface.Test4(ctx, a, b)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if param0 == nil {
+		m.currentAmountOfErrors = 0
+		m.openedAt = nil
+		return
+	}
+
+	if !m.cfg.shouldCountAfter(param0) {
+		return
+	}
+
+	m.currentAmountOfErrors++
+
+	if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+	}
+
 	return
 }

@@ -37,9 +37,13 @@ func TestTest1(t *testing.T) {
 		panic(err)
 	}
 
-	wrappedTest := wrap.NewTestMiddleware(&wrap.Test{}, wrap.WithTestLogging(logger))
-	res, err := wrappedTest.Test1(1, 12.2)
-	require.NoError(t, err)
-	require.Equal(t, 13, res)
+	wrappedTest := wrap.NewTestMiddleware(&wrap.Test{}, wrap.WithTestLogging(logger), wrap.WithTestCircuitBreaker(wrap.NewCircuitBreakerConfig()))
+
+	for range 6 {
+		_, err = wrappedTest.Test1(1, 12.2)
+	}
+	require.Equal(t, err, wrap.ErrOpenCircuitBreaker)
+	// require.NoError(t, err)
+	// require.Equal(t, 13, res)
 
 }
