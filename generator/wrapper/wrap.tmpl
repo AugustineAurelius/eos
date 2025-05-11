@@ -366,14 +366,14 @@ func Register{{.Name}}Metrics(registry prometheus.Registerer) *{{.Name | firstTo
 }
 
 type {{.Name | firstToLower}}MetricsMiddleware struct {
-    next    {{.Name}}Interface
+    {{.Name}}Interface
     metrics *{{.Name | firstToLower}}Metrics
 }
 
 func With{{.Name}}Metrics(metrics *{{.Name | firstToLower}}Metrics) {{.Name}}Option {
     return func(next {{.Name}}Interface) {{.Name}}Interface {
         return &{{.Name | firstToLower}}MetricsMiddleware{
-            next:    next,
+            {{.Name}}Interface:    next,
             metrics: metrics,
         }
     }
@@ -407,7 +407,7 @@ func (m *{{$.Name | firstToLower}}MetricsMiddleware) {{.Name}} {{.Signature}}{
             m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
         }
 	}()
-    return m.next.{{.Name}}({{ join .Params  ","}})
+    return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
 }
 {{- end}}
 
