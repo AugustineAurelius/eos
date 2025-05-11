@@ -24,7 +24,7 @@ func (t *Test) Test2(a int, b float64) error {
 	return nil
 }
 
-func (t *Test) Test3(ctx context.Context, a int, b float64) error {
+func (t *Test) Test3(ctx context.Context, c int, b float64) error {
 	return nil
 }
 func (t *Test) Test5(ctx context.Context, a int, b float64) (int, error) {

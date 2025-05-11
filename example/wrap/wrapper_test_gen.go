@@ -21,7 +21,7 @@ import (
 type TestInterface interface {
 	Test1(a uuid.UUID, b *Test222) (param0 int, param1 error)
 	Test2(a int, b float64) (param0 error)
-	Test3(ctx context.Context, a int, b float64) (param0 error)
+	Test3(ctx context.Context, c int, b float64) (param0 error)
 	Test5(ctx context.Context, a int, b float64) (param0 int, param1 error)
 	Test4(ctx context.Context, a int, b float64) (param0 error)
 }
@@ -30,24 +30,24 @@ type testCore struct {
 	impl *Test
 }
 
-func (c *testCore) Test1(a uuid.UUID, b *Test222) (param0 int, param1 error) {
-	return c.impl.Test1(a, b)
+func (core *testCore) Test1(a uuid.UUID, b *Test222) (param0 int, param1 error) {
+	return core.impl.Test1(a, b)
 }
 
-func (c *testCore) Test2(a int, b float64) (param0 error) {
-	return c.impl.Test2(a, b)
+func (core *testCore) Test2(a int, b float64) (param0 error) {
+	return core.impl.Test2(a, b)
 }
 
-func (c *testCore) Test3(ctx context.Context, a int, b float64) (param0 error) {
-	return c.impl.Test3(ctx, a, b)
+func (core *testCore) Test3(ctx context.Context, c int, b float64) (param0 error) {
+	return core.impl.Test3(ctx, c, b)
 }
 
-func (c *testCore) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
-	return c.impl.Test5(ctx, a, b)
+func (core *testCore) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
+	return core.impl.Test5(ctx, a, b)
 }
 
-func (c *testCore) Test4(ctx context.Context, a int, b float64) (param0 error) {
-	return c.impl.Test4(ctx, a, b)
+func (core *testCore) Test4(ctx context.Context, a int, b float64) (param0 error) {
+	return core.impl.Test4(ctx, a, b)
 }
 
 // Main constructor
@@ -97,14 +97,14 @@ func (m *testLoggingMiddleware) Test2(a int, b float64) (param0 error) {
 	return m.next.Test2(a, b)
 }
 
-func (m *testLoggingMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testLoggingMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	start := time.Now()
-	m.logger.Info("call Test3", zap.Int("a", a), zap.Float64("b", b))
+	m.logger.Info("call Test3", zap.Int("c", c), zap.Float64("b", b))
 	defer func() {
 		m.logger.Info("method Test3 call done", zap.Duration("diration", time.Since(start)), zap.Error(param0))
 	}()
 
-	return m.next.Test3(ctx, a, b)
+	return m.next.Test3(ctx, c, b)
 }
 
 func (m *testLoggingMiddleware) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
@@ -154,10 +154,10 @@ func (m *testTracingMiddleware) Test2(a int, b float64) (param0 error) {
 	return m.next.Test2(a, b)
 }
 
-func (m *testTracingMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testTracingMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	ctx, span := m.tracer.Start(ctx, "Test.Test3")
 	defer span.End()
-	return m.next.Test3(ctx, a, b)
+	return m.next.Test3(ctx, c, b)
 }
 
 func (m *testTracingMiddleware) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
@@ -228,7 +228,7 @@ func (m *testNewRelicTracingMiddleware) Test2(a int, b float64) (param0 error) {
 	return m.next.Test2(a, b)
 }
 
-func (m *testNewRelicTracingMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testNewRelicTracingMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	var logger *zap.Logger
 	txn := newrelic.FromContext(ctx)
 
@@ -256,10 +256,10 @@ func (m *testNewRelicTracingMiddleware) Test3(ctx context.Context, a int, b floa
 			logger = m.baseLogger.With(zap.Error(err))
 		}
 	}
-	logger.Info("call TestTest3", zap.Int("a", a), zap.Float64("b", b))
+	logger.Info("call TestTest3", zap.Int("c", c), zap.Float64("b", b))
 	defer func() { logger.Info("method TestTest3 call done", zap.Error(param0)) }()
 
-	return m.next.Test3(ctx, a, b)
+	return m.next.Test3(ctx, c, b)
 }
 
 func (m *testNewRelicTracingMiddleware) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
@@ -346,10 +346,10 @@ func WithTestTimeout(duration time.Duration) TestOption {
 	}
 }
 
-func (m *testTimeoutMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testTimeoutMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	ctx, cancel := context.WithTimeout(ctx, m.duration)
 	defer cancel()
-	return m.TestInterface.Test3(ctx, a, b)
+	return m.TestInterface.Test3(ctx, c, b)
 }
 
 func (m *testTimeoutMiddleware) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
@@ -420,7 +420,7 @@ func WithTestOtelMetrics(metrics *testOtelMetricsRegister) TestOption {
 	}
 }
 
-func (m *testOtelMetrics) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testOtelMetrics) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	start := time.Now()
 	methodName := "Test3"
 	commonAttrs := []attribute.KeyValue{
@@ -458,7 +458,7 @@ func (m *testOtelMetrics) Test3(ctx context.Context, a int, b float64) (param0 e
 		}
 	}()
 
-	return m.TestInterface.Test3(ctx, a, b)
+	return m.TestInterface.Test3(ctx, c, b)
 }
 
 func (m *testOtelMetrics) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
@@ -585,15 +585,15 @@ func RegisterTestMetrics(registry prometheus.Registerer) *testMetrics {
 }
 
 type testMetricsMiddleware struct {
-	next    TestInterface
+	TestInterface
 	metrics *testMetrics
 }
 
 func WithTestMetrics(metrics *testMetrics) TestOption {
 	return func(next TestInterface) TestInterface {
 		return &testMetricsMiddleware{
-			next:    next,
-			metrics: metrics,
+			TestInterface: next,
+			metrics:       metrics,
 		}
 	}
 }
@@ -623,7 +623,7 @@ func (m *testMetricsMiddleware) Test1(a uuid.UUID, b *Test222) (param0 int, para
 			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
 		}
 	}()
-	return m.next.Test1(a, b)
+	return m.TestInterface.Test1(a, b)
 }
 
 func (m *testMetricsMiddleware) Test2(a int, b float64) (param0 error) {
@@ -651,10 +651,10 @@ func (m *testMetricsMiddleware) Test2(a int, b float64) (param0 error) {
 			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
 		}
 	}()
-	return m.next.Test2(a, b)
+	return m.TestInterface.Test2(a, b)
 }
 
-func (m *testMetricsMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testMetricsMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	start := time.Now()
 	methodName := "Test3"
 
@@ -679,7 +679,7 @@ func (m *testMetricsMiddleware) Test3(ctx context.Context, a int, b float64) (pa
 			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
 		}
 	}()
-	return m.next.Test3(ctx, a, b)
+	return m.TestInterface.Test3(ctx, c, b)
 }
 
 func (m *testMetricsMiddleware) Test5(ctx context.Context, a int, b float64) (param0 int, param1 error) {
@@ -707,7 +707,7 @@ func (m *testMetricsMiddleware) Test5(ctx context.Context, a int, b float64) (pa
 			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
 		}
 	}()
-	return m.next.Test5(ctx, a, b)
+	return m.TestInterface.Test5(ctx, a, b)
 }
 
 func (m *testMetricsMiddleware) Test4(ctx context.Context, a int, b float64) (param0 error) {
@@ -735,7 +735,7 @@ func (m *testMetricsMiddleware) Test4(ctx context.Context, a int, b float64) (pa
 			m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
 		}
 	}()
-	return m.next.Test4(ctx, a, b)
+	return m.TestInterface.Test4(ctx, a, b)
 }
 
 type testRetryMiddleware struct {
@@ -861,7 +861,7 @@ func (m *testRetryMiddleware) Test2(a int, b float64) (param0 error) {
 	return
 }
 
-func (m *testRetryMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testRetryMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	var cancel context.CancelFunc
 	if _, ok := ctx.Deadline(); !ok && m.retryConfig.timeout != nil {
 		ctx, cancel = context.WithTimeout(ctx, *m.retryConfig.timeout)
@@ -873,7 +873,7 @@ func (m *testRetryMiddleware) Test3(ctx context.Context, a int, b float64) (para
 			return
 		}
 
-		param0 = m.TestInterface.Test3(ctx, a, b)
+		param0 = m.TestInterface.Test3(ctx, c, b)
 		if param0 == nil {
 			return
 		}
@@ -1167,7 +1167,7 @@ func (m *testCircuitBreakerMiddleware) Test2(a int, b float64) (param0 error) {
 
 }
 
-func (m *testCircuitBreakerMiddleware) Test3(ctx context.Context, a int, b float64) (param0 error) {
+func (m *testCircuitBreakerMiddleware) Test3(ctx context.Context, c int, b float64) (param0 error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -1177,7 +1177,7 @@ func (m *testCircuitBreakerMiddleware) Test3(ctx context.Context, a int, b float
 			param0 = ErrOpenCircuitBreaker
 			return
 		}
-		param0 = m.TestInterface.Test3(ctx, a, b)
+		param0 = m.TestInterface.Test3(ctx, c, b)
 		if param0 == nil {
 			m.state = HalfOpen
 			m.currentAmountOfSuccess = 1
@@ -1187,7 +1187,7 @@ func (m *testCircuitBreakerMiddleware) Test3(ctx context.Context, a int, b float
 		openedAt := time.Now().Add(m.cfg.openInterval)
 		m.openedAt = &openedAt
 	case HalfOpen:
-		param0 = m.TestInterface.Test3(ctx, a, b)
+		param0 = m.TestInterface.Test3(ctx, c, b)
 		if param0 == nil {
 			m.currentAmountOfSuccess++
 			if m.currentAmountOfSuccess >= m.cfg.succesAmountToClose {
@@ -1203,7 +1203,7 @@ func (m *testCircuitBreakerMiddleware) Test3(ctx context.Context, a int, b float
 		m.openedAt = &openedAt
 		m.state = Open
 	case Closed:
-		param0 = m.TestInterface.Test3(ctx, a, b)
+		param0 = m.TestInterface.Test3(ctx, c, b)
 		if param0 == nil {
 			m.currentAmountOfErrors = 0
 			m.openedAt = nil

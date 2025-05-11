@@ -29,8 +29,8 @@ type {{.Name | firstToLower}}Core struct {
 }
 
 {{range .Methods}}
-func (c *{{$.Name | firstToLower}}Core) {{.Name}}{{.Signature}} {
-	return c.impl.{{.Name}}({{ join .Params  ","}})
+func (core *{{$.Name | firstToLower}}Core) {{.Name}}{{.Signature}} {
+	return core.impl.{{.Name}}({{ join .Params  ","}})
 }
 {{end}}
 
