@@ -669,6 +669,7 @@ func (m *{{$.Name | firstToLower}}CircuitBreakerMiddleware)  {{.Name}} {{.Signat
 		if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
 			openedAt := time.Now().Add(m.cfg.openInterval)
 			m.openedAt = &openedAt
+			m.state = Open
 		}
 	}
 

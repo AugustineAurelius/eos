@@ -1,6 +1,7 @@
 package wrap_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/AugustineAurelius/eos/example/wrap"
@@ -42,6 +43,7 @@ func TestTest1(t *testing.T) {
 
 	for range 6 {
 		_, err = wrappedTest.Test1(uuid.New(), &wrap.Test222{ID: uuid.New(), Name: "123"})
+		fmt.Println(err)
 	}
 	require.Equal(t, err, wrap.ErrOpenCircuitBreaker)
 	// require.NoError(t, err)
