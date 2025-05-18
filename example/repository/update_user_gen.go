@@ -5,7 +5,7 @@ package repository
 import (
 	"context"
 	"fmt"
-
+	"database/sql"
 	sq "github.com/Masterminds/squirrel"
 )
 
@@ -33,3 +33,18 @@ func (r *CommandRepository) Update(ctx context.Context, u Update, opts ...Filter
 
 
 
+
+func UpdateSQLTx(ctx context.Context, run *sql.Tx, u Update, opts ...FilterOpt) error {
+    b:= sq.Update(TableUser).PlaceholderFormat(sq.Question)
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+    b = ApplySet(b, u)
+	query, args := b.MustSql()
+	if _, err := run.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec update query %s with args %v", query, args)
+	}
+	return nil 
+}

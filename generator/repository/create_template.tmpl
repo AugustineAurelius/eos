@@ -6,6 +6,7 @@ package {{.PackageName}}
 import (
 	"context"
 	"fmt"
+
 	txrunner "{{.TxRunnerPath}}" 
 	common "{{.CommonPath}}"
 
@@ -15,7 +16,7 @@ import (
 import (
 	"context"
 	"fmt"
-
+	"database/sql"
 	sq "github.com/Masterminds/squirrel"
 )
 {{end}}
@@ -42,6 +43,8 @@ func create(ctx context.Context, run common.Querier, {{.MessageName | lower}} *{
 	}
 	return nil
 }
+
+
 {{else}}
 // Create{{.MessageName}} inserts a new {{.MessageName}} into the database.
 func (r *CommandRepository) Create(ctx context.Context,  {{.MessageName | lower}} *{{.MessageName}}) error {
@@ -56,3 +59,16 @@ func (r *CommandRepository) Create(ctx context.Context,  {{.MessageName | lower}
 	return nil
 }
 {{end}}
+
+
+func CreateSQLTx(ctx context.Context, run *sql.Tx, {{.MessageName | lower}} *{{.MessageName}}) error {
+	model := Converter(*{{.MessageName | lower}})
+	query, args := sq.Insert(Table{{.MessageName}}).
+		Columns({{.Fields | columns}}).
+		Values(model.Values()...).PlaceholderFormat(sq.Question).MustSql()
+
+	if _, err := run.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
+	}
+	return nil
+}

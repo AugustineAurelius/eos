@@ -6,7 +6,7 @@ package repository
 import (
 	"context"
 	"fmt"
-
+	"database/sql"
 	sq "github.com/Masterminds/squirrel"
 )
 
@@ -25,3 +25,16 @@ func (r *CommandRepository) Create(ctx context.Context,  user *User) error {
 	return nil
 }
 
+
+
+func CreateSQLTx(ctx context.Context, run *sql.Tx, user *User) error {
+	model := Converter(*user)
+	query, args := sq.Insert(TableUser).
+		Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).
+		Values(model.Values()...).PlaceholderFormat(sq.Question).MustSql()
+
+	if _, err := run.ExecContext(ctx, query, args...); err != nil {
+		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
+	}
+	return nil
+}

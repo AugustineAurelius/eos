@@ -4,6 +4,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"database/sql"
     
 	common "github.com/AugustineAurelius/eos/example/common"
 	sq "github.com/Masterminds/squirrel"
@@ -331,4 +332,84 @@ func userIter(rows common.Rows)iterUser{
 		}
     }
   }
+}
+
+
+
+func GetManySQLTx(ctx context.Context, run *sql.Tx,  opts ...FilterOpt) (Users, error) {
+	b := sq.Select(
+		ColumnUserID,
+		ColumnUserName,
+		ColumnUserEmail,
+		ColumnUserBalance,
+	).From(TableUser).PlaceholderFormat(sq.Question)
+
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+    query, args := 	b.MustSql()
+
+    var users Users
+
+	rows, err := run.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying database: %w", err)
+	}
+	defer rows.Close()
+
+
+	var userModel UserModel
+	for rows.Next() {
+		err := rows.Scan(
+			&userModel.ID,
+			&userModel.Name,
+			&userModel.Email,
+			&userModel.Balance,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error scanning row: %w", err)
+		}
+		users = append(users, ReverseConverter(userModel))
+	}
+
+	if rows.Err() != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", rows.Err())
+	}
+
+	return users, err
+}
+
+func GetSQLTx(ctx context.Context, run *sql.Tx, opts ...FilterOpt) (*User, error){
+	b := sq.Select(
+		ColumnUserID,
+		ColumnUserName,
+		ColumnUserEmail,
+		ColumnUserBalance,
+	).From(TableUser).PlaceholderFormat(sq.Question)
+
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+    query, args := 	b.MustSql()
+
+	var userModel UserModel
+	err := run.QueryRowContext(ctx, query, args...).Scan(
+		&userModel.ID,
+		&userModel.Name,
+		&userModel.Email,
+		&userModel.Balance,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
+	}
+
+	user := ReverseConverter(userModel)
+
+	return &user, err
 }
