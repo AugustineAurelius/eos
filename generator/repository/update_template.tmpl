@@ -70,7 +70,7 @@ func (r *CommandRepository) Update(ctx context.Context, u Update, opts ...Filter
 
 
 func UpdateSQLTx(ctx context.Context, run *sql.Tx, u Update, opts ...FilterOpt) error {
-    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+    b:= sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
 		opts[i](f)
