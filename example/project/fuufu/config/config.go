@@ -10,7 +10,7 @@ type Config struct {
 	SeverConfig     Server
 }
 
-// Collector
+//Collector
 type Collector struct {
 	Host string
 	Port int
@@ -24,7 +24,7 @@ func (man Manager) LoadCollector() Collector {
 	return man.LoadConfig().CollectorConfig
 }
 
-// Logger
+//Logger
 type Logger struct {
 	Debug bool `yaml:"debug"`
 	JSON  bool `yaml:"json"`
@@ -34,7 +34,8 @@ func (man Manager) LoadLogging() Logger {
 	return man.LoadConfig().LoggerConfig
 }
 
-// Server
+
+//Server
 type Server struct {
 	Addr                  string
 	AuthMiddlewareExclude []string

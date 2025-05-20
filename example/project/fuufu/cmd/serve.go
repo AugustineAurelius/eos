@@ -83,7 +83,9 @@ func createServeCMD(manager *config.Manager) *cobra.Command {
 			)
 			otel.SetMeterProvider(meterProvider)
 
+
 			tracer := otel.Tracer(name)
+
 
 			err = runtime.Start()
 			if err != nil {

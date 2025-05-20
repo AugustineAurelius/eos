@@ -42,6 +42,7 @@ func upInitMigrationForfuufu(ctx context.Context, tx *sql.Tx) error {
 }
 
 func downInitMigrationForfuufu(ctx context.Context, tx *sql.Tx) error {
-	_, err := tx.ExecContext(ctx, ``)
+	_, err := tx.ExecContext(ctx, `DROP TRIGGER IF EXISTS update_task_updated_at ON tasks;
+	DROP TABLE IF EXISTS tasks;`)
 	return err
 }

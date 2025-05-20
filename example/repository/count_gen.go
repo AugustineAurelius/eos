@@ -5,35 +5,42 @@ import (
 	"context"
 	"fmt"
     
-	common "github.com/AugustineAurelius/eos/example/common"
 	sq "github.com/Masterminds/squirrel"
 )
 
 
-func (r *CommandRepository) Count(ctx context.Context,  opts ...FilterOpt) (int, error) {
-	return count(ctx, r.db, opts...)
+func (r *CommandRepository) Count(ctx context.Context, opts ...FilterOpt) (int, error) {
+	return count(ctx, r.runner, r.placeholder, opts...)
 }
 
-func (r *QueryRepository) Count(ctx context.Context,  opts ...FilterOpt) (int, error) {
-	return count(ctx, r.db, opts...)
+func (r *QueryRepository) Count(ctx context.Context, opts ...FilterOpt) (int, error) {
+	return count(ctx, r.runner, r.placeholder, opts...)
 }
 
-func count(ctx context.Context, run common.Querier, opts ...FilterOpt) (int, error) {
-    b := sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Question)
+func count(ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt) (int, error) {
+	var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+    b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Dollar)
+	default:
+    b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Question)
+	}
+
     
-    f := &Filter{}
+  f := &Filter{}
 	for i := 0; i < len(opts); i++ {
 		opts[i](f)
 	}
 	b = ApplyWhere(b, *f)
 
-    query, args := 	b.MustSql()
+  query, args := 	b.MustSql()
 
-    var count int
-    err := run.QueryRow(ctx, query,args...).Scan(&count)
-    if err != nil {
-        return 0, fmt.Errorf("failed to count query %s with args %v error = %w" , query, args, err)
-    }
+  var count int
+  err := run.QueryRowContext(ctx, query,args...).Scan(&count)
+  if err != nil {
+    return 0, fmt.Errorf("failed to count query %s with args %v error = %w" , query, args, err)
+  }
 
-    return count, nil
+  return count, nil
 }

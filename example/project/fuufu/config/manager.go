@@ -22,6 +22,7 @@ func envNameFromConfigKey(key string) string {
 	return "FUUFU_" + strings.ToUpper(strings.ReplaceAll(key, ".", "_"))
 }
 
+
 type Manager struct {
 	viper    *viper.Viper
 	command  *cobra.Command
@@ -111,7 +112,7 @@ func (man Manager) LoadConfig() Config {
 			Port: man.getConfigInt("collector.port"),
 		},
 		SeverConfig: Server{
-			Addr: man.getConfigString("server.address"),
+			Addr:                  man.getConfigString("server.address"),
 		},
 	}
 	return cfg

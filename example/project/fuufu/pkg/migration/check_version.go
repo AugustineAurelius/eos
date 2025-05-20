@@ -31,7 +31,7 @@ func CheckMigrations(ctx context.Context, postgresConfig DNSer) error {
 		return err
 	}
 
-	if version == 0 {
+	if version == 0{
 		return errors.New("should run fuufu migrate up")
 	}
 

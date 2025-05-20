@@ -2,6 +2,7 @@ package repository_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -11,10 +12,7 @@ import (
 
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/AugustineAurelius/eos/example/common"
-
 	"github.com/AugustineAurelius/eos/example/repository"
-	"github.com/AugustineAurelius/eos/pkg/logger"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +30,15 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/brianvoe/gofakeit/v7"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/mattn/go-sqlite3"
 )
+
+type querier interface {
+	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+}
 
 var serviceName = semconv.ServiceNameKey.String("eos-test-repository")
 
@@ -68,29 +74,28 @@ func Test_WithDatabases(t *testing.T) {
 	// }()
 	// name := "go.opentelemetry.io/contrib/examples/otel-collector"
 	// tracer := otel.Tracer(name)
-	// meter := otel.Meter(name)
-	logger := logger.New(&mode{})
+	// meter := otel.Meter
 
 	cases := []struct {
 		DatabaseName string
-		Provide      func() common.Querier
+		Provide      func() querier
 	}{
 		{
 			DatabaseName: "sqlite",
-			Provide: func() common.Querier {
-				db, err := common.NewSQLiteInMemory(context.Background(), logger)
+			Provide: func() querier {
+				db, err := sql.Open("sqlite3", ":memory:")
 				assert.NoError(t, err)
 
-				_, err = db.Exec(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT, balance float);`)
+				_, err = db.ExecContext(context.Background(), `CREATE TABLE users (id TEXT PRIMARY KEY, name TEXT, email TEXT, balance float);`)
 				require.NoError(t, err)
 
-				return &db
+				return db
 
 			},
 		},
 		{
 			DatabaseName: "postgres",
-			Provide: func() common.Querier {
+			Provide: func() querier {
 				ctx := context.Background()
 
 				c, err := postgres.RunContainer(ctx,
@@ -107,14 +112,14 @@ func Test_WithDatabases(t *testing.T) {
 				connStr, err := c.ConnectionString(ctx, "sslmode=disable")
 				assert.NoError(t, err)
 
-				db, err := common.NewPostgres(ctx, postgresProvider{url: connStr}, logger)
+				db, err := sql.Open("pgx", connStr)
 
 				assert.NoError(t, err)
 
-				_, err = db.Exec(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT, balance float);`)
+				_, err = db.ExecContext(ctx, `CREATE TABLE if not exists users (id UUID PRIMARY KEY,name TEXT,email TEXT, balance float);`)
 				require.NoError(t, err)
 
-				return &db
+				return db
 			},
 		},
 		// {
@@ -190,6 +195,11 @@ func Test_WithDatabases(t *testing.T) {
 			db := c.Provide()
 
 			userRepo := repository.NewCommand(db)
+
+			if c.DatabaseName == "postgres" {
+
+				userRepo = repository.NewCommand(db, repository.DollarWildcard)
+			}
 
 			id := uuid.New()
 			email := "email"

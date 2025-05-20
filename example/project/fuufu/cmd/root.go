@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"os"
-
+    "os"
+    
 	"github.com/AugustineAurelius/fuufu/config"
 	"github.com/spf13/cobra"
 )
@@ -22,8 +22,8 @@ func Execute() {
 
 func createRootCMD() *cobra.Command {
 	var rootCmd = &cobra.Command{
-		Use: "fuufu",
-		Short:/*add description of your app*/ "",
+		Use:   "fuufu",
+		Short: /*add description of your app*/ "",
 	}
 
 	rootCmd.PersistentFlags().StringP("config", "c", "", "Path to a configuration file")

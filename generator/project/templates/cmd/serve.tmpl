@@ -97,8 +97,8 @@ func createServeCMD(manager *config.Manager) *cobra.Command {
 			handler := server.NewHandlerMiddleware(&server.Handler{Repo: todoRepository},
 				server.WithHandlerLogging(log),
 				server.WithHandlerOtelMetrics(server.RegisterHandlerOtelMetrics(meterProvider)),
-				server.WithhandlerTracing(tracer),
-				server.WithhandlerTimeout(time.Second*5),
+				server.WithHandlerTracing(tracer),
+				server.WithHandlerTimeout(time.Second*5),
 			)
 
 			todoHandlers := api.NewStrictHandler(handler, nil)

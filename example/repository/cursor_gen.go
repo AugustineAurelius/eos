@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"errors"
-	common "github.com/AugustineAurelius/eos/example/common" 
 
 
 	sq "github.com/Masterminds/squirrel"
@@ -22,9 +21,9 @@ type BuilderParams struct {
 }
 
 type Cursor struct {
-	pool      common.Querier
+	pool      querier 
 	builder   sq.SelectBuilder
-	rows      []UserModel
+	rows      []User
 	index     int
 	offset    int
 	limit     int
@@ -44,13 +43,25 @@ func (r *CommandRepository) NewCursor(ctx context.Context,  params BuilderParams
 	if params.Offset != nil {
 		offset = *params.Offset
 	}
-
-	b := sq.Select(
+  var b sq.SelectBuilder
+  switch r.placeholder {
+	case DollarWildcard:
+	  b = sq.Select(
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
 		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Question)
+	  ).From(TableUser).PlaceholderFormat(sq.Dollar)
+  default:
+	  b = sq.Select(
+		ColumnUserID,
+		ColumnUserName,
+		ColumnUserEmail,
+		ColumnUserBalance,
+	  ).From(TableUser).PlaceholderFormat(sq.Question)
+  }
+
+
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -59,9 +70,9 @@ func (r *CommandRepository) NewCursor(ctx context.Context,  params BuilderParams
 	b = ApplyWhere(b, *f)
 
 	return &Cursor{
-		pool:      r.db,
+		pool:      r.runner,
 		builder:   b,
-		rows:      make([]UserModel, 0, limit),
+		rows:      make([]User, 0, limit),
 		index:    -1,
 		offset:   offset,
 		limit:    limit,
@@ -83,12 +94,23 @@ func (r *QueryRepository) NewCursor(ctx context.Context,  params BuilderParams, 
 		offset = *params.Offset
 	}
 
-	b := sq.Select(
+  var b sq.SelectBuilder
+  switch r.placeholder {
+	case DollarWildcard:
+	  b = sq.Select(
 		ColumnUserID,
 		ColumnUserName,
 		ColumnUserEmail,
 		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Question)
+	  ).From(TableUser).PlaceholderFormat(sq.Dollar)
+  default:
+	  b = sq.Select(
+		ColumnUserID,
+		ColumnUserName,
+		ColumnUserEmail,
+		ColumnUserBalance,
+	  ).From(TableUser).PlaceholderFormat(sq.Question)
+  }
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -97,9 +119,9 @@ func (r *QueryRepository) NewCursor(ctx context.Context,  params BuilderParams, 
 	b = ApplyWhere(b, *f)
 
 	return &Cursor{
-		pool:      r.db,
+		pool:      r.runner,
 		builder:   b,
-		rows:      make([]UserModel, 0, limit),
+		rows:      make([]User, 0, limit),
 		index:    -1,
 		offset:   offset,
 		limit:    limit,
@@ -146,15 +168,15 @@ func (c *Cursor) fetchRows() error {
 		return err
 	}
 
-	rows, err := c.pool.Query(c.ctx, sql, args...)
+	rows, err := c.pool.QueryContext(c.ctx, sql, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	c.rows = make([]UserModel, 0,c.limit)
+	c.rows = make([]User, 0,c.limit)
 	for rows.Next() {
-		var item UserModel
+		var item User
 		err := rows.Scan(
 			&item.ID,
 			&item.Name,
@@ -206,15 +228,15 @@ func (c *Cursor) Prev() bool {
 	return false
 }
 
-func (c *Cursor) Current() (UserModel, error) {
+func (c *Cursor) Current() (User, error) {
 	if c.closed {
-		return UserModel{}, errors.New("cursor is closed")
+		return User{}, errors.New("cursor is closed")
 	}
 
 	if c.index >= 0 && c.index < len(c.rows) {
 		return c.rows[c.index], nil
 	}
-	return UserModel{} , errors.New("not found")
+	return User{} , errors.New("not found")
 }
 
 func (c *Cursor) Reset() {

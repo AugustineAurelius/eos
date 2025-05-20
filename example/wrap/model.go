@@ -3,8 +3,6 @@ package wrap
 import (
 	"context"
 	"errors"
-
-	"github.com/google/uuid"
 )
 
 //go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Test
@@ -12,11 +10,10 @@ type Test struct {
 }
 
 type Test222 struct {
-	ID   uuid.UUID
 	Name string
 }
 
-func (t *Test) Test1(a uuid.UUID, b *Test222) (int, error) {
+func (t *Test) Test1(a int, b *Test222) (int, error) {
 	return 1, errors.New("123")
 }
 

@@ -7,7 +7,6 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"slices"
 	"strings"
 	"text/template"
 
@@ -193,12 +192,6 @@ func parseStruct(node *ast.File, structName string) ([]Field, error) {
 
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("Struct %s not found", structName)
-	}
-
-	if !slices.ContainsFunc(fields, func(f Field) bool {
-		return f.Name == "ID" && f.Type == "uuid.UUID"
-	}) {
-		errors.FailErr(fmt.Errorf("couldn't find ID field or type not google/uuid.UUID"))
 	}
 
 	return fields, nil

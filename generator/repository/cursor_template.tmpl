@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"errors"
-	common "{{.CommonPath}}" 
 
 
 	sq "github.com/Masterminds/squirrel"
@@ -22,9 +21,9 @@ type BuilderParams struct {
 }
 
 type Cursor struct {
-	pool      common.Querier
+	pool      querier 
 	builder   sq.SelectBuilder
-	rows      []{{.MessageName}}Model
+	rows      []{{.MessageName}}
 	index     int
 	offset    int
 	limit     int
@@ -44,12 +43,23 @@ func (r *CommandRepository) NewCursor(ctx context.Context,  params BuilderParams
 	if params.Offset != nil {
 		offset = *params.Offset
 	}
-
-	b := sq.Select(
+  var b sq.SelectBuilder
+  switch r.placeholder {
+	case DollarWildcard:
+	  b = sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+	  ).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+  default:
+	  b = sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	  ).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+  }
+
+
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -58,9 +68,9 @@ func (r *CommandRepository) NewCursor(ctx context.Context,  params BuilderParams
 	b = ApplyWhere(b, *f)
 
 	return &Cursor{
-		pool:      r.db,
+		pool:      r.runner,
 		builder:   b,
-		rows:      make([]{{.MessageName}}Model, 0, limit),
+		rows:      make([]{{.MessageName}}, 0, limit),
 		index:    -1,
 		offset:   offset,
 		limit:    limit,
@@ -82,11 +92,21 @@ func (r *QueryRepository) NewCursor(ctx context.Context,  params BuilderParams, 
 		offset = *params.Offset
 	}
 
-	b := sq.Select(
+  var b sq.SelectBuilder
+  switch r.placeholder {
+	case DollarWildcard:
+	  b = sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+	  ).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+  default:
+	  b = sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	  ).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+  }
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -95,9 +115,9 @@ func (r *QueryRepository) NewCursor(ctx context.Context,  params BuilderParams, 
 	b = ApplyWhere(b, *f)
 
 	return &Cursor{
-		pool:      r.db,
+		pool:      r.runner,
 		builder:   b,
-		rows:      make([]{{.MessageName}}Model, 0, limit),
+		rows:      make([]{{.MessageName}}, 0, limit),
 		index:    -1,
 		offset:   offset,
 		limit:    limit,
@@ -144,15 +164,15 @@ func (c *Cursor) fetchRows() error {
 		return err
 	}
 
-	rows, err := c.pool.Query(c.ctx, sql, args...)
+	rows, err := c.pool.QueryContext(c.ctx, sql, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	c.rows = make([]{{.MessageName}}Model, 0,c.limit)
+	c.rows = make([]{{.MessageName}}, 0,c.limit)
 	for rows.Next() {
-		var item {{.MessageName}}Model
+		var item {{.MessageName}}
 		err := rows.Scan(
 		{{- range .Fields }}
 			&item.{{.Name}},
@@ -203,15 +223,15 @@ func (c *Cursor) Prev() bool {
 	return false
 }
 
-func (c *Cursor) Current() ({{.MessageName}}Model, error) {
+func (c *Cursor) Current() ({{.MessageName}}, error) {
 	if c.closed {
-		return {{.MessageName}}Model{}, errors.New("cursor is closed")
+		return {{.MessageName}}{}, errors.New("cursor is closed")
 	}
 
 	if c.index >= 0 && c.index < len(c.rows) {
 		return c.rows[c.index], nil
 	}
-	return {{.MessageName}}Model{} , errors.New("not found")
+	return {{.MessageName}}{} , errors.New("not found")
 }
 
 func (c *Cursor) Reset() {

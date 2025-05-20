@@ -6,74 +6,50 @@ import (
 	"fmt"
 	"database/sql"
     
-	common "{{.CommonPath}}"
-	{{- if .WithTx}}
-	txrunner "{{.TxRunnerPath}}"
-	{{- end }}
 	sq "github.com/Masterminds/squirrel"
 	{{- range .Imports }}
-    {{ . }}
-    {{- end }}
+  {{ . }}
+  {{- end }}
 )
 
 
-{{if .WithTx}}
 func (r *CommandRepository) Get(ctx context.Context,  opts ...FilterOpt) (*{{.MessageName}}, error) {
-	if tx, ok := txrunner.FromContex(ctx); ok {
-		return get(ctx, tx, opts...)
-    } 
-	return get(ctx, r.db, opts...)
+	return get(ctx, r.runner, r.placeholder, opts...)
 }
 
 func (r *QueryRepository) Get(ctx context.Context,  opts ...FilterOpt) (*{{.MessageName}}, error) {
-	if tx, ok := txrunner.FromContex(ctx); ok {
-		return get(ctx, tx, opts...)
-    } 
-	return get(ctx, r.db, opts...)
+	return get(ctx, r.runner, r.placeholder, opts...)
 }
 
 
 func (r *CommandRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
-	if tx, ok := txrunner.FromContex(ctx); ok {
-		return getMany(ctx, tx, opts...)
-    } 
-	return getMany(ctx, r.db, opts...)
+	return getMany(ctx, r.runner, r.placeholder, opts...)
 }
 
 func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
-	if tx, ok := txrunner.FromContex(ctx); ok {
-		return getMany(ctx, tx, opts...)
-    } 
-	return getMany(ctx, r.db, opts...)
+	return getMany(ctx, r.runner, r.placeholder, opts...)
 }
 
-{{else}}
-// Get{{.MessageName}} retrieves a {{.MessageName}} by ID.
-func (r *CommandRepository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error) {
-	return get(ctx, r.db, opts...)
-}
+func get(ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt) (*{{.MessageName}}, error){
+  var b sq.SelectBuilder
 
-func (r *QueryRepository) Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error) {
-	return get(ctx, r.db, opts...)
-}
-
-// GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *CommandRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
-	return getMany(ctx, r.db, opts...)
-}
-
-// GetMany{{.MessageName}} retrieves a {{.MessageName}} by filter.
-func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.MessageName}}s, error) {
-	return getMany(ctx, r.db, opts...)
-}
-{{end}}
-
-func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*{{.MessageName}}, error){
-	b := sq.Select(
+	switch placeholder {
+	case DollarWildcard:
+	b = sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	default:
+	b = sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+	}
+  
+
+
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -81,29 +57,41 @@ func get(ctx context.Context, run common.Querier, opts ...FilterOpt) (*{{.Messag
 	}
 	b = ApplyWhere(b, *f)
 
-    query, args := 	b.MustSql()
+  query, args := 	b.MustSql()
 
-	var {{.MessageName | lower}}Model {{.MessageName}}Model
-	err := run.QueryRow(ctx, query, args...).Scan(
+	var temp {{.MessageName}}
+	err := run.QueryRowContext(ctx, query, args...).Scan(
 		{{- range .Fields }}
-		&{{$.MessageName | lower}}Model.{{.Name}},
+		&temp.{{.Name}},
 		{{- end }}
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
 	}
 
-	{{.MessageName | lower}} := ReverseConverter({{.MessageName | lower}}Model)
 
-	return &{{.MessageName | lower}}, err
+	return &temp, err
 }
 
-func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) ({{.MessageName}}s, error) {
-	b := sq.Select(
+func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...FilterOpt) ({{.MessageName}}s, error) {
+  var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+	b = sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)  
+
+	default:
+	b = sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+	}
+
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -111,28 +99,28 @@ func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) ({{.Me
 	}
 	b = ApplyWhere(b, *f)
 
-    query, args := 	b.MustSql()
+  query, args := 	b.MustSql()
 
-    var {{.MessageName | lower}}s {{.MessageName}}s
+  var {{.MessageName | lower}}s {{.MessageName}}s
 
-	rows, err := run.Query(ctx, query, args...)
+	rows, err := run.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
 	}
 	defer rows.Close()
 
 
-	var {{.MessageName | lower}}Model {{.MessageName}}Model
+	var temp {{.MessageName}}
 	for rows.Next() {
 		err := rows.Scan(
 		{{- range .Fields }}
-			&{{$.MessageName | lower}}Model.{{.Name}},
+			&temp.{{.Name}},
 		{{- end }}
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
-		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, ReverseConverter({{.MessageName | lower}}Model))
+		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, temp)
 	}
 
 	if rows.Err() != nil {
@@ -146,17 +134,29 @@ func getMany(ctx context.Context, run common.Querier,  opts ...FilterOpt) ({{.Me
 
 {{- range .Fields }}
 func (r *CommandRepository) Get{{.Name}} (ctx context.Context,  opts ...FilterOpt)  ([]{{.Type}}, error){
-	return get{{.Name}}(ctx,r.db,opts...)
+	return get{{.Name}}(ctx,r.runner, r.placeholder, opts...)
 }
 
 func (r *QueryRepository) Get{{.Name}} (ctx context.Context,  opts ...FilterOpt)  ([]{{.Type}}, error){
-	return get{{.Name}}(ctx,r.db,opts...)
+	return get{{.Name}}(ctx,r.runner, r.placeholder, opts...)
 }
 
-func get{{.Name}} (ctx context.Context, run common.Querier,   opts ...FilterOpt)  ([]{{.Type}}, error){
-	b := sq.Select(
+func get{{.Name}} (ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt)  ([]{{.Type}}, error){
+  var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+	b = sq.Select(
+		Column{{$.MessageName}}{{.Name}},
+	).From(Table{{$.MessageName}}).PlaceholderFormat(sq.Dollar)
+
+	default:
+	b = sq.Select(
 		Column{{$.MessageName}}{{.Name}},
 	).From(Table{{$.MessageName}}).PlaceholderFormat(sq.Question)
+	}
+
+
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -166,7 +166,7 @@ func get{{.Name}} (ctx context.Context, run common.Querier,   opts ...FilterOpt)
 	query, args := 	b.MustSql()	
     {{.Name}}s := make([]{{.Type}}, 0, 32) 
 
-	rows, err := run.Query(ctx, query, args...)
+	rows, err := run.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
 	}
@@ -191,19 +191,33 @@ func get{{.Name}} (ctx context.Context, run common.Querier,   opts ...FilterOpt)
 {{- end}}
 
 func (r *CommandRepository) GetLazy (ctx context.Context,  opts ...FilterOpt)  (iter{{.MessageName}}, error){
-	return getManyLazy(ctx,r.db,opts...)
+	return getManyLazy(ctx,r.runner,r.placeholder,opts...)
 }
 
 func (r *QueryRepository) GetLazy(ctx context.Context,  opts ...FilterOpt)  (iter{{.MessageName}}, error){
-	return getManyLazy(ctx,r.db,opts...)
+	return getManyLazy(ctx,r.runner,r.placeholder, opts...)
 }
 
-func getManyLazy (ctx context.Context, run common.Querier, opts ...FilterOpt) (iter{{.MessageName}}, error){
-	b := sq.Select(
+func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ...FilterOpt) (iter{{.MessageName}}, error){
+  var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+	b = sq.Select(
+		{{- range .Fields }}
+		Column{{$.MessageName}}{{.Name}},
+		{{- end }}
+	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	default:
+	b = sq.Select(
 		{{- range .Fields }}
 		Column{{$.MessageName}}{{.Name}},
 		{{- end }}
 	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+
+	}
+
+
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -211,10 +225,10 @@ func getManyLazy (ctx context.Context, run common.Querier, opts ...FilterOpt) (i
 	}
 	b = ApplyWhere(b, *f)
 
-    query, args := 	b.MustSql()
+  query, args := b.MustSql()
 
 
-	rows, err := run.Query(ctx, query, args...)
+	rows, err := run.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
 	}
@@ -222,99 +236,23 @@ func getManyLazy (ctx context.Context, run common.Querier, opts ...FilterOpt) (i
 	return  {{.MessageName | lower}}Iter(rows), nil
 }
 
-func {{.MessageName | lower}}Iter(rows common.Rows)iter{{.MessageName}}{
+func {{.MessageName | lower}}Iter(rows *sql.Rows)iter{{.MessageName}}{
   return func(yield func({{.MessageName}}) bool) {
     defer rows.Close()
-   	{{.MessageName | lower}}Model := &{{.MessageName}}Model{}
+    var temp {{.MessageName}}
     for rows.Next() {
         err := rows.Scan(
 			{{- range .Fields }}
-				&{{$.MessageName | lower}}Model.{{.Name}},
+				&temp.{{.Name}},
 			{{- end }}
 			)
 		if err != nil {
 			return
 		}
     
-		if !yield(ReverseConverter(*{{.MessageName | lower}}Model) ) {
+		if !yield(temp) {
 			return
 		}
     }
   }
-}
-
-
-
-func GetManySQLTx(ctx context.Context, run *sql.Tx,  opts ...FilterOpt) ({{.MessageName}}s, error) {
-	b := sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
-
-	f := &Filter{}
-	for i := 0; i < len(opts); i++ {
-		opts[i](f)
-	}
-	b = ApplyWhere(b, *f)
-
-    query, args := 	b.MustSql()
-
-    var {{.MessageName | lower}}s {{.MessageName}}s
-
-	rows, err := run.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error querying database: %w", err)
-	}
-	defer rows.Close()
-
-
-	var {{.MessageName | lower}}Model {{.MessageName}}Model
-	for rows.Next() {
-		err := rows.Scan(
-		{{- range .Fields }}
-			&{{$.MessageName | lower}}Model.{{.Name}},
-		{{- end }}
-		)
-		if err != nil {
-			return nil, fmt.Errorf("error scanning row: %w", err)
-		}
-		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, ReverseConverter({{.MessageName | lower}}Model))
-	}
-
-	if rows.Err() != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", rows.Err())
-	}
-
-	return {{.MessageName | lower}}s, err
-}
-
-func GetSQLTx(ctx context.Context, run *sql.Tx, opts ...FilterOpt) (*{{.MessageName}}, error){
-	b := sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
-
-	f := &Filter{}
-	for i := 0; i < len(opts); i++ {
-		opts[i](f)
-	}
-	b = ApplyWhere(b, *f)
-
-    query, args := 	b.MustSql()
-
-	var {{.MessageName | lower}}Model {{.MessageName}}Model
-	err := run.QueryRowContext(ctx, query, args...).Scan(
-		{{- range .Fields }}
-		&{{$.MessageName | lower}}Model.{{.Name}},
-		{{- end }}
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
-	}
-
-	{{.MessageName | lower}} := ReverseConverter({{.MessageName | lower}}Model)
-
-	return &{{.MessageName | lower}}, err
 }

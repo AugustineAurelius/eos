@@ -2,29 +2,57 @@
 package repository
 
 import (
+	"context"
+	"database/sql"
+
 	sq "github.com/Masterminds/squirrel"
-	common "github.com/AugustineAurelius/eos/example/common"
-    "github.com/google/uuid"
+  "github.com/google/uuid"
 )
 
+type querier interface {
+    ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
+    QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
+    QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+}
+
+type wildcard int
+
+const (
+	QuestionWildcard wildcard = iota + 1
+	DollarWildcard
+)
 
 type CommandRepository struct{
-	db common.Querier
+	runner querier
+  placeholder wildcard 
 }
 
 type QueryRepository struct{
-	db common.Querier
+	runner querier
+  placeholder wildcard 
 }
 
-func NewCommand(db common.Querier) *CommandRepository {
+func NewCommand(db querier, wildcards ...wildcard) *CommandRepository {
+  w := QuestionWildcard 
+  if len(wildcards) >0 {
+    w = wildcards[0]
+  }
+
 	return &CommandRepository{
-		db: db,
+		runner: db,
+    placeholder: w,
 	}
 }
 
-func NewQuery(db common.Querier) *QueryRepository {
+func NewQuery(db querier, wildcards ...wildcard) *QueryRepository {
+  w := QuestionWildcard 
+  if len(wildcards) >0 {
+    w = wildcards[0]
+  }
+
 	return &QueryRepository{
-		db: db,
+	    runner: db,
+      placeholder: w,
 	}
 }
 

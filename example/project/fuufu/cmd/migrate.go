@@ -11,6 +11,7 @@ import (
 )
 
 func createMigrateCMD(manager *config.Manager) *cobra.Command {
+	var dir string
 	var gooseCMD string
 
 	migrateCMD := &cobra.Command{
@@ -48,6 +49,7 @@ func createMigrateCMD(manager *config.Manager) *cobra.Command {
 	}
 
 	migrateCMD.PersistentFlags().StringVar(&gooseCMD, "goose_command", "up", "command for goose migrations")
+	migrateCMD.PersistentFlags().StringVar(&dir, "dir", "db/postgres/migration", "path to directory with migrations")
 
 	return migrateCMD
 }

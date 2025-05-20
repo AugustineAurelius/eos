@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/AugustineAurelius/eos/example/wrap"
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -42,7 +41,7 @@ func TestTest1(t *testing.T) {
 	wrappedTest := wrap.NewTestMiddleware(&wrap.Test{}, wrap.WithTestLogging(logger), wrap.WithTestCircuitBreaker(wrap.NewCircuitBreakerConfig()))
 
 	for range 6 {
-		_, err = wrappedTest.Test1(uuid.New(), &wrap.Test222{ID: uuid.New(), Name: "123"})
+		_, err = wrappedTest.Test1(1, &wrap.Test222{Name: "123"})
 		fmt.Println(err)
 	}
 	require.Equal(t, err, wrap.ErrOpenCircuitBreaker)
