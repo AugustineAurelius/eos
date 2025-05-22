@@ -1,12 +1,12 @@
 package cmd
 
 import (
-	"github.com/{{.Github}}/{{.ProjectName}}/config"
-	"github.com/{{.Github}}/{{.ProjectName}}/pkg/logger"
+	"{{.ProjectURL}}/{{.ProjectName}}/config"
+	"{{.ProjectURL}}/{{.ProjectName}}/pkg/logger"
 	"github.com/pressly/goose/v3"
 	"github.com/spf13/cobra"
 
-	_ "github.com/{{.Github}}/{{.ProjectName}}/db/postgres/migrations"
+	_ "{{.ProjectURL}}/{{.ProjectName}}/db/postgres/migrations"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 

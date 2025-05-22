@@ -14,6 +14,6 @@ func GeneratorCMD() *cobra.Command {
 		Long:  `generator cmd`,
 	}
 
-	cmd.AddCommand(builderCMD(), repositoryCMD(), txCMD(), commonCMD(), projectCMD(), wrapperCMD())
+	cmd.AddCommand(builderCMD(), repositoryCMD(), commonCMD(), projectCMD(), wrapperCMD())
 	return cmd
 }
