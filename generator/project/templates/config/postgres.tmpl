@@ -88,3 +88,7 @@ func (man Manager) LoadPostgres() Postgres {
 func (man Manager) LoadPostgresSlave() Postgres {
 	return man.LoadConfig().PostgresSlave
 }
+
+func (c Postgres) URI() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", c.Username, c.Password, c.Host, c.Port, c.Database, c.SSLMode)
+}
