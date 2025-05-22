@@ -14,7 +14,7 @@ import (
 var templateFS embed.FS
 
 type ProjectData struct {
-	Github      string
+	ProjectURL  string
 	ProjectName string
 	Output      string
 

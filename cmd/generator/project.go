@@ -7,7 +7,7 @@ import (
 
 func projectCMD() *cobra.Command {
 
-	var outputDir, projectName, github string
+	var outputDir, projectName, url string
 	cmd := &cobra.Command{
 		Use:   "project",
 		Short: "project generator",
@@ -15,7 +15,7 @@ func projectCMD() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			return project.Generate(project.ProjectData{
-				Github:      github,
+				ProjectURL:  url,
 				ProjectName: projectName,
 				Output:      outputDir,
 			})
@@ -24,7 +24,7 @@ func projectCMD() *cobra.Command {
 
 	cmd.PersistentFlags().StringVarP(&outputDir, "output", "o", "", "output dir path")
 	cmd.PersistentFlags().StringVarP(&projectName, "project", "p", "", "name of project")
-	cmd.PersistentFlags().StringVarP(&github, "github", "g", "", "your github name")
+	cmd.PersistentFlags().StringVarP(&url, "url", "u", "", "path to repos")
 
 	cmd.MarkPersistentFlagRequired("project")
 	cmd.MarkPersistentFlagRequired("github")
