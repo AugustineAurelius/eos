@@ -26,19 +26,19 @@ const (
 
 type CommandRepository struct{
 	runner querier
-  placeholder wildcard 
+  	placeholder wildcard 
 }
 
 type QueryRepository struct{
 	runner querier
-  placeholder wildcard 
+  	placeholder wildcard 
 }
 
 func NewCommand(db querier, wildcards ...wildcard) *CommandRepository {
-  w := QuestionWildcard 
-  if len(wildcards) >0 {
-    w = wildcards[0]
-  }
+	w := QuestionWildcard 
+	if len(wildcards) >0 {
+		w = wildcards[0]
+	}
 
 	return &CommandRepository{
 		runner: db,
@@ -47,14 +47,14 @@ func NewCommand(db querier, wildcards ...wildcard) *CommandRepository {
 }
 
 func NewQuery(db querier, wildcards ...wildcard) *QueryRepository {
-  w := QuestionWildcard 
-  if len(wildcards) >0 {
-    w = wildcards[0]
-  }
+  	w := QuestionWildcard 
+  	if len(wildcards) >0 {
+    	w = wildcards[0]
+  	}
 
 	return &QueryRepository{
 	    runner: db,
-      placeholder: w,
+      	placeholder: w,
 	}
 }
 
@@ -79,53 +79,61 @@ type Filter struct {
 type FilterOpt func(f *Filter)
 
 func NewFilter(opts ...FilterOpt) Filter{
-	f := &Filter{}
+	f := Filter{}
 	for _, opt := range opts {
-		opt(f)
+		opt(&f)
 	}
-	return *f
+	return f
 }
 
 func WithLimit(limit int)  FilterOpt {
+	c := limit
 	return func(f *Filter) {
-		f.limit = &limit
+		f.limit = &c
 	}
 }
 func WithOffset(offset int)  FilterOpt {
+	c := offset
 	return func(f *Filter) {
-		f.offset = &offset
+		f.offset = &c
 	}
 }
 
 {{- range .Fields }}
 func With{{.Name}}({{.Name | lower}} {{.Type}})  FilterOpt {
+	c := {{.Name | lower}}
 	return func(f *Filter) {
-		f.{{.Name | lower}} = &{{.Name | lower}}
+		f.{{.Name | lower}} = &c
 	}
 }
 func With{{.Name}}Not({{.Name | lower}} {{.Type}})  FilterOpt {
+	c := {{.Name | lower}}
 	return func(f *Filter) {
-		f.not{{.Name | lower}} = &{{.Name | lower}}
+		f.not{{.Name | lower}} = &c
 	}
 }
 func With{{.Name}}MoreThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	c := {{.Name | lower}}
 	return func(f *Filter) {
-		f.gt{{.Name | lower}} = &{{.Name | lower}}
+		f.gt{{.Name | lower}} = &c
 	}
 }
 func With{{.Name}}LowerThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	c := {{.Name | lower}}
 	return func(f *Filter) {
-		f.lt{{.Name | lower}} = &{{.Name | lower}}
+		f.lt{{.Name | lower}} = &c
 	}
 }
 func With{{.Name}}MoreOrEqualThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	c := {{.Name | lower}}
 	return func(f *Filter) {
-		f.gteq{{.Name | lower}} = &{{.Name | lower}}
+		f.gteq{{.Name | lower}} = &c
 	}
 }
 func With{{.Name}}LowerOrEqualThen({{.Name | lower}} {{.Type}})  FilterOpt {
+	c := {{.Name | lower}}
 	return func(f *Filter) {
-		f.lteq{{.Name | lower}} = &{{.Name | lower}}
+		f.lteq{{.Name | lower}} = &c
 	}
 }
 func With{{.Name}}s ({{.Name | lower}}s ...{{.Type}})  FilterOpt {
@@ -148,12 +156,12 @@ func WithOrderBy{{.Name}}Desc()  FilterOpt {
 }
 {{- end }}
 
-func ApplyWhere[B interface {
+func applyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
 	Limit(limit uint64) B
 	Offset(limit uint64) B
 	OrderBy(orderBys ...string) B
-}](b B,f Filter) B {
+}](b B,f *Filter) B {
   {{- range .Fields }}
 	if f.{{.Name | lower}} != nil {
       b = b.Where(sq.Eq{Column{{$.MessageName}}{{.Name}}: *f.{{.Name | lower}}})
@@ -219,9 +227,9 @@ func WithUpdate{{.Name}}({{.Name | lower}} {{.Type}})  UpdateOpt {
 }
 {{- end }}
 
-func ApplySet[B interface {
+func applySet[B interface {
     Set(column string, value interface{}) B
-}] (b B, f Update) B {
+}] (b B, f *Update) B {
   {{- range .Fields }}
 	if f.{{.Name | lower}} != nil {
       b = b.Set(Column{{$.MessageName}}{{.Name}}, *f.{{.Name | lower}})

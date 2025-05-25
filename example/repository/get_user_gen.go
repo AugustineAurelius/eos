@@ -38,11 +38,11 @@ func get(ctx context.Context, run querier, placeholder wildcard, opts ...FilterO
 		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Question)
 	}
   
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
   	query, args := b.MustSql()
 
@@ -66,13 +66,13 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Question)
 	}
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
- 	query, args := 	b.MustSql()
+ 	query, args := b.MustSql()
 
   	var users Users
 	rows, err := run.QueryContext(ctx, query, args...)
@@ -117,11 +117,11 @@ func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ..
 		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Question)
 	}
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
   	query, args := b.MustSql()
 	rows, err := run.QueryContext(ctx, query, args...)
@@ -173,11 +173,11 @@ func getID (ctx context.Context, run querier, placeholder wildcard, opts ...Filt
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     IDs := make([]uuid.UUID, 0, 32) 
 
@@ -227,11 +227,11 @@ func getName (ctx context.Context, run querier, placeholder wildcard, opts ...Fi
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     Names := make([]string, 0, 32) 
 
@@ -281,11 +281,11 @@ func getEmail (ctx context.Context, run querier, placeholder wildcard, opts ...F
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     Emails := make([]*string, 0, 32) 
 
@@ -335,11 +335,11 @@ func getBalance (ctx context.Context, run querier, placeholder wildcard, opts ..
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     Balances := make([]float64, 0, 32) 
 

@@ -27,11 +27,11 @@ func count(ctx context.Context, run querier, placeholder wildcard, opts ...Filte
     	b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Question)
 	}
 
-  	f := &Filter{}
+  	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
   	query, args := b.MustSql()
 

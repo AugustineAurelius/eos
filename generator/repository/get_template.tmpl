@@ -40,11 +40,11 @@ func get(ctx context.Context, run querier, placeholder wildcard, opts ...FilterO
 		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	}
   
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
   	query, args := b.MustSql()
 
@@ -68,13 +68,13 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	}
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
- 	query, args := 	b.MustSql()
+ 	query, args := b.MustSql()
 
   	var {{.MessageName | lower}}s {{.MessageName}}s
 	rows, err := run.QueryContext(ctx, query, args...)
@@ -119,11 +119,11 @@ func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ..
 		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	}
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
   	query, args := b.MustSql()
 	rows, err := run.QueryContext(ctx, query, args...)
@@ -180,11 +180,11 @@ func get{{.Name}} (ctx context.Context, run querier, placeholder wildcard, opts 
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     {{.Name}}s := make([]{{.Type}}, 0, 32) 
 

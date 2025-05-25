@@ -8,20 +8,20 @@ import (
 )
 // Update{{.MessageName}} updates an existing {{.MessageName}} in the database.
 func (r *CommandRepository) Update(ctx context.Context, u Update, opts ...FilterOpt) error {
-  var b sq.UpdateBuilder
+  	var b sq.UpdateBuilder
 	switch r.placeholder {
 	case DollarWildcard:
-	  b = sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
-  default:
-	  b = sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
-  }
+	  	b = sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+  	default:
+	  	b = sq.Update(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+  	}
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
-  b = ApplySet(b, u)
+	b = applyWhere(b, &f)
+  	b = applySet(b, &u)
 
 	query, args := b.MustSql()
 	if _, err := r.runner.ExecContext(ctx, query, args...); err != nil {
