@@ -10,21 +10,20 @@ import (
 
 // DeleteUser deletes a User by ID.
 func (r *CommandRepository) Delete(ctx context.Context, opts ...FilterOpt) error {
-  var b sq.DeleteBuilder 
+  	var b sq.DeleteBuilder 
 	switch r.placeholder {
 	case DollarWildcard:
-	  b = sq.Delete(TableUser).PlaceholderFormat(sq.Dollar)
-  default:
-	  b = sq.Delete(TableUser).PlaceholderFormat(sq.Question)
-  }
-
+	  	b = sq.Delete(TableUser).PlaceholderFormat(sq.Dollar)
+  	default:
+	  	b = sq.Delete(TableUser).PlaceholderFormat(sq.Question)
+ 	}
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
 		opts[i](f)
 	}
 	b = ApplyWhere(b, *f)
-	query, args := 	b.MustSql()	
+	query, args := b.MustSql()	
 	if _, err := r.runner.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec delete query %s with args %v error = %w", query, args, err)
 	}

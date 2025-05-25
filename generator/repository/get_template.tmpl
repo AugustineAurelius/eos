@@ -31,67 +31,42 @@ func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) ({{.Me
 }
 
 func get(ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt) (*{{.MessageName}}, error){
-  var b sq.SelectBuilder
+  	var b sq.SelectBuilder
 
 	switch placeholder {
 	case DollarWildcard:
-	b = sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
 	default:
-	b = sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	}
   
-
-
-
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
 		opts[i](f)
 	}
 	b = ApplyWhere(b, *f)
 
-  query, args := 	b.MustSql()
+  	query, args := b.MustSql()
 
-	var temp {{.MessageName}}
-	err := run.QueryRowContext(ctx, query, args...).Scan(
-		{{- range .Fields }}
-		&temp.{{.Name}},
-		{{- end }}
-	)
+	var model {{.MessageName}}
+	err := run.QueryRowContext(ctx, query, args...).Scan({{- .Fields | scan }})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
 	}
 
 
-	return &temp, err
+	return &model, err
 }
 
 func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...FilterOpt) ({{.MessageName}}s, error) {
-  var b sq.SelectBuilder
+  	var b sq.SelectBuilder
 
 	switch placeholder {
 	case DollarWildcard:
-	b = sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)  
-
+		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)  
 	default:
-	b = sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	}
-
 
 	f := &Filter{}
 	for i := 0; i < len(opts); i++ {
@@ -99,10 +74,9 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	}
 	b = ApplyWhere(b, *f)
 
-  query, args := 	b.MustSql()
+ 	query, args := 	b.MustSql()
 
-  var {{.MessageName | lower}}s {{.MessageName}}s
-
+  	var {{.MessageName | lower}}s {{.MessageName}}s
 	rows, err := run.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
@@ -110,17 +84,13 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	defer rows.Close()
 
 
-	var temp {{.MessageName}}
+	var model {{.MessageName}}
 	for rows.Next() {
-		err := rows.Scan(
-		{{- range .Fields }}
-			&temp.{{.Name}},
-		{{- end }}
-		)
+		err = rows.Scan({{- .Fields | scan -}})
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
-		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, temp)
+		{{.MessageName | lower}}s = append({{.MessageName | lower}}s, model)
 	}
 
 	if rows.Err() != nil {
@@ -130,6 +100,58 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	return {{.MessageName | lower}}s, err
 }
 
+
+func (r *CommandRepository) GetLazy (ctx context.Context,  opts ...FilterOpt)  (iter{{.MessageName}}, error){
+	return getManyLazy(ctx,r.runner,r.placeholder,opts...)
+}
+
+func (r *QueryRepository) GetLazy(ctx context.Context,  opts ...FilterOpt)  (iter{{.MessageName}}, error){
+	return getManyLazy(ctx,r.runner,r.placeholder, opts...)
+}
+
+func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ...FilterOpt) (iter{{.MessageName}}, error){
+ 	 var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	default:
+		b = sq.Select({{- .Fields | columns -}}).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+	}
+
+	f := &Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](f)
+	}
+	b = ApplyWhere(b, *f)
+
+  	query, args := b.MustSql()
+	rows, err := run.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying database: %w", err)
+	}
+	
+	return  {{.MessageName | lower}}Iter(rows), nil
+}
+
+func {{.MessageName | lower}}Iter(rows *sql.Rows)iter{{.MessageName}}{
+  return func(yield func({{.MessageName}}) bool) {
+    defer rows.Close()
+    var model {{.MessageName}}
+    for rows.Next() {
+        err := rows.Scan(
+			{{- .Fields | scan -}}
+			)
+		if err != nil {
+			return
+		}
+    
+		if !yield(model) {
+			return
+		}
+    }
+  }
+}
 
 
 {{- range .Fields }}
@@ -187,72 +209,4 @@ func get{{.Name}} (ctx context.Context, run querier, placeholder wildcard, opts 
 
 	return {{.Name}}s, err
 }
-
 {{- end}}
-
-func (r *CommandRepository) GetLazy (ctx context.Context,  opts ...FilterOpt)  (iter{{.MessageName}}, error){
-	return getManyLazy(ctx,r.runner,r.placeholder,opts...)
-}
-
-func (r *QueryRepository) GetLazy(ctx context.Context,  opts ...FilterOpt)  (iter{{.MessageName}}, error){
-	return getManyLazy(ctx,r.runner,r.placeholder, opts...)
-}
-
-func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ...FilterOpt) (iter{{.MessageName}}, error){
-  var b sq.SelectBuilder
-
-	switch placeholder {
-	case DollarWildcard:
-	b = sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
-	default:
-	b = sq.Select(
-		{{- range .Fields }}
-		Column{{$.MessageName}}{{.Name}},
-		{{- end }}
-	).From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
-
-	}
-
-
-
-	f := &Filter{}
-	for i := 0; i < len(opts); i++ {
-		opts[i](f)
-	}
-	b = ApplyWhere(b, *f)
-
-  query, args := b.MustSql()
-
-
-	rows, err := run.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error querying database: %w", err)
-	}
-	
-	return  {{.MessageName | lower}}Iter(rows), nil
-}
-
-func {{.MessageName | lower}}Iter(rows *sql.Rows)iter{{.MessageName}}{
-  return func(yield func({{.MessageName}}) bool) {
-    defer rows.Close()
-    var temp {{.MessageName}}
-    for rows.Next() {
-        err := rows.Scan(
-			{{- range .Fields }}
-				&temp.{{.Name}},
-			{{- end }}
-			)
-		if err != nil {
-			return
-		}
-    
-		if !yield(temp) {
-			return
-		}
-    }
-  }
-}

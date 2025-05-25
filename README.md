@@ -9,6 +9,7 @@
 
   <p align="center">
     A personal Go project to speed up development!
+    TODO: fix helpers (iterators on bool and on structs)
       </p>
 </div>
 

@@ -34,17 +34,12 @@ type MessageData struct {
 	ModulePath     string
 	TxRunnerPath   string
 	CommonPath     string
-	WithTx         bool
 	Imports        []string
 	IteratorNumber []string
+	WithDefaultID  bool
 }
 
-func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
-	if withTX {
-		txRunnerPath = helpers.ValidateFlag(txRunnerPath)
-	}
-	commonPath = helpers.ValidateFlag(commonPath)
-
+func Generate(structName string, WithDefaultID bool) {
 	filePath := os.Getenv("GOFILE")
 
 	fset := token.NewFileSet()
@@ -72,11 +67,9 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 		Columns:        strings.Join(getColumns(fields), ", "),
 		Placeholders:   strings.Join(getPlaceholders(structName, fields), ", "),
 		ModulePath:     helpers.GetPackagePath(),
-		TxRunnerPath:   helpers.GetModulePath() + txRunnerPath,
-		CommonPath:     helpers.GetModulePath() + commonPath,
-		WithTx:         withTX,
 		Imports:        imports,
 		IteratorNumber: []string{"int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "float32", "float64"},
+		WithDefaultID:  WithDefaultID,
 	}
 
 	generateFile("schema.go", "schema_template.tmpl", data)
@@ -84,7 +77,6 @@ func Generate(structName, txRunnerPath, commonPath string, withTX bool) {
 	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "get_template.tmpl", data)
 
 	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "create_template.tmpl", data)
-	// generateFile("create_"+strings.ToLower(structName)+"_gen_test.go", "create_test_template.tmpl", data)
 
 	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "update_template.tmpl", data)
 
@@ -109,6 +101,16 @@ func generateFile(fileName, tmplPath string, data MessageData) {
 		"lower":    strings.ToLower,
 		"upper":    strings.ToUpper,
 		"contains": strings.Contains,
+		"columns_create": func(fields []Field) string {
+			cols := make([]string, 0, len(fields))
+			for _, field := range fields {
+				if data.WithDefaultID && field.Name == "ID" {
+					continue
+				}
+				cols = append(cols, fmt.Sprintf("Column%s%s", data.MessageName, field.Name))
+			}
+			return strings.Join(cols, ", ")
+		},
 		"columns": func(fields []Field) string {
 			cols := make([]string, 0, len(fields))
 			for _, field := range fields {
@@ -116,12 +118,29 @@ func generateFile(fileName, tmplPath string, data MessageData) {
 			}
 			return strings.Join(cols, ", ")
 		},
-		"scanFields": func(fields []Field) string {
-			scanFields := make([]string, 0, len(fields))
+		"values_create": func(fields []Field) string {
+			cols := make([]string, 0, len(fields))
 			for _, field := range fields {
-				scanFields = append(scanFields, fmt.Sprintf("&{{$.MessageName | lower}}.%s", field.Name))
+				if data.WithDefaultID && field.Name == "ID" {
+					continue
+				}
+				cols = append(cols, fmt.Sprintf("model.%s", field.Name))
 			}
-			return strings.Join(scanFields, ", ")
+			return strings.Join(cols, ", ")
+		},
+		"values": func(fields []Field) string {
+			cols := make([]string, 0, len(fields))
+			for _, field := range fields {
+				cols = append(cols, fmt.Sprintf("model.%s", field.Name))
+			}
+			return strings.Join(cols, ", ")
+		},
+		"scan": func(fields []Field) string {
+			cols := make([]string, 0, len(fields))
+			for _, field := range fields {
+				cols = append(cols, fmt.Sprintf("&model.%s", field.Name))
+			}
+			return strings.Join(cols, ", ")
 		},
 		"Placeholder": func(index int) string { return fmt.Sprintf("$%d", index+1) },
 		"snakeCase": func(s string) string {

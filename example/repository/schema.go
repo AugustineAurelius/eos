@@ -8,14 +8,3 @@ const (
 	ColumnUserEmail = "email"
 	ColumnUserBalance = "balance"
 )
-
-
-func (m User) Values() []any {
-	return []any {
-			m.ID,
-			m.Name,
-			m.Email,
-			m.Balance,
-	}
-}
-

@@ -7,13 +7,3 @@ const (
 	Column{{$.MessageName}}{{.Name}} = "{{.Column | snakeCase}}"
 {{- end }}
 )
-
-
-func (m {{.MessageName}}) Values() []any {
-	return []any {
-		{{- range .Fields }}
-			m.{{.Name}}, 
-		{{- end }}
-	}
-}
-
