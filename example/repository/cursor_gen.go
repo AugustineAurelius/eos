@@ -63,11 +63,11 @@ func (r *CommandRepository) NewCursor(ctx context.Context,  params BuilderParams
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
 	return &Cursor{
 		pool:      r.runner,
@@ -112,11 +112,11 @@ func (r *QueryRepository) NewCursor(ctx context.Context,  params BuilderParams, 
 	  ).From(TableUser).PlaceholderFormat(sq.Question)
   }
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
 	return &Cursor{
 		pool:      r.runner,

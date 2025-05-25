@@ -22,25 +22,24 @@ func count(ctx context.Context, run querier, placeholder wildcard, opts ...Filte
 
 	switch placeholder {
 	case DollarWildcard:
-    b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Dollar)
+    	b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Dollar)
 	default:
-    b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Question)
+    	b = sq.Select("COUNT (id)").From(TableUser).PlaceholderFormat(sq.Question)
 	}
 
-    
-  f := &Filter{}
+  	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
-  query, args := 	b.MustSql()
+  	query, args := b.MustSql()
 
-  var count int
-  err := run.QueryRowContext(ctx, query,args...).Scan(&count)
-  if err != nil {
-    return 0, fmt.Errorf("failed to count query %s with args %v error = %w" , query, args, err)
-  }
+  	var count int
+  	err := run.QueryRowContext(ctx, query,args...).Scan(&count)
+  	if err != nil {
+    	return 0, fmt.Errorf("failed to count query %s with args %v error = %w" , query, args, err)
+  	}
 
-  return count, nil
+  	return count, nil
 }

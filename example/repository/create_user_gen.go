@@ -9,24 +9,16 @@ import (
 )
 
 // CreateUser inserts a new User into the database.
-func (r *CommandRepository) Create (ctx context.Context, model *User) error {
-  var query string
-  var args []any
+func (r *CommandRepository) Create(ctx context.Context, model *User) error {
+  	var query string
+  	var args []any
   
 	switch r.placeholder {
 	case DollarWildcard:
-		query, args = sq.Insert(TableUser).
-    Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).
-		Values(model.Values()...).
-    PlaceholderFormat(sq.Dollar).
-    MustSql()
-  default:
-		query, args = sq.Insert(TableUser).
-    Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).
-		Values(model.Values()...).
-    PlaceholderFormat(sq.Question).
-    MustSql()	
-  }
+		query, args = sq.Insert(TableUser).Columns(ColumnUserName, ColumnUserEmail, ColumnUserBalance).Values(model.Name, model.Email, model.Balance). PlaceholderFormat(sq.Dollar).MustSql()
+  	default:
+		query, args = sq.Insert(TableUser).Columns(ColumnUserName, ColumnUserEmail, ColumnUserBalance).Values(model.Name, model.Email, model.Balance).PlaceholderFormat(sq.Question).MustSql()	
+  	}
 
 	if _, err := r.runner.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)
@@ -34,22 +26,21 @@ func (r *CommandRepository) Create (ctx context.Context, model *User) error {
 	return nil
 }
 
-
 // CreateUser inserts a new User into the database.
-func (r *CommandRepository) CreateMany (ctx context.Context, users []User) error {
-  var builder sq.InsertBuilder
+func (r *CommandRepository) CreateMany(ctx context.Context, users []User) error {
+  	var builder sq.InsertBuilder
 
 	switch r.placeholder {
 	case DollarWildcard:
-	  builder = sq.Insert(TableUser).Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance). PlaceholderFormat(sq.Dollar)
-  default:
-	  builder = sq.Insert(TableUser).Columns(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance). PlaceholderFormat(sq.Question)
-  }
+	  	builder = sq.Insert(TableUser).Columns(ColumnUserName, ColumnUserEmail, ColumnUserBalance).PlaceholderFormat(sq.Dollar)
+  	default:
+	  	builder = sq.Insert(TableUser).Columns(ColumnUserName, ColumnUserEmail, ColumnUserBalance).PlaceholderFormat(sq.Question)
+  	}
 
-  for _, model := range users {
-    builder = builder.Values(model.Values()...)
-  }
-	query, args := 	builder.MustSql()
+  	for _, model := range users {
+    	builder = builder.Values(model.Name, model.Email, model.Balance)
+  	}
+	query, args := builder.MustSql()
 
 	if _, err := r.runner.ExecContext(ctx, query, args...); err != nil {
 		return fmt.Errorf("failed to exec create query %s with args %v error = %w", query, args, err)

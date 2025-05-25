@@ -1,0 +1,28 @@
+FROM golang:1.24.2-alpine AS builder
+
+WORKDIR /app
+
+COPY go.* ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-s -w -extldflags '-static'" \
+    -trimpath \
+    -o main .
+
+FROM alpine:3.20.0
+
+RUN apk --no-cache add ca-certificates && \
+    adduser -D -u 1000 -g '' {{.ProjectName}}
+
+WORKDIR /app
+
+COPY --from=builder --chown={{.ProjectName}}:{{.ProjectName}} /app/main .
+COPY --from=builder --chown={{.ProjectName}}:{{.ProjectName}} /app/swagger-ui ./swagger-ui
+COPY --from=builder --chown={{.ProjectName}}:{{.ProjectName}} /app/api ./api
+
+USER {{.ProjectName}}
+
+CMD ["./main","serve"]

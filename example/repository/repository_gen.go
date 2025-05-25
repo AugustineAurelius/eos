@@ -24,19 +24,19 @@ const (
 
 type CommandRepository struct{
 	runner querier
-  placeholder wildcard 
+  	placeholder wildcard 
 }
 
 type QueryRepository struct{
 	runner querier
-  placeholder wildcard 
+  	placeholder wildcard 
 }
 
 func NewCommand(db querier, wildcards ...wildcard) *CommandRepository {
-  w := QuestionWildcard 
-  if len(wildcards) >0 {
-    w = wildcards[0]
-  }
+	w := QuestionWildcard 
+	if len(wildcards) >0 {
+		w = wildcards[0]
+	}
 
 	return &CommandRepository{
 		runner: db,
@@ -45,14 +45,14 @@ func NewCommand(db querier, wildcards ...wildcard) *CommandRepository {
 }
 
 func NewQuery(db querier, wildcards ...wildcard) *QueryRepository {
-  w := QuestionWildcard 
-  if len(wildcards) >0 {
-    w = wildcards[0]
-  }
+  	w := QuestionWildcard 
+  	if len(wildcards) >0 {
+    	w = wildcards[0]
+  	}
 
 	return &QueryRepository{
 	    runner: db,
-      placeholder: w,
+      	placeholder: w,
 	}
 }
 
@@ -102,51 +102,59 @@ type Filter struct {
 type FilterOpt func(f *Filter)
 
 func NewFilter(opts ...FilterOpt) Filter{
-	f := &Filter{}
+	f := Filter{}
 	for _, opt := range opts {
-		opt(f)
+		opt(&f)
 	}
-	return *f
+	return f
 }
 
 func WithLimit(limit int)  FilterOpt {
+	c := limit
 	return func(f *Filter) {
-		f.limit = &limit
+		f.limit = &c
 	}
 }
 func WithOffset(offset int)  FilterOpt {
+	c := offset
 	return func(f *Filter) {
-		f.offset = &offset
+		f.offset = &c
 	}
 }
 func WithID(id uuid.UUID)  FilterOpt {
+	c := id
 	return func(f *Filter) {
-		f.id = &id
+		f.id = &c
 	}
 }
 func WithIDNot(id uuid.UUID)  FilterOpt {
+	c := id
 	return func(f *Filter) {
-		f.notid = &id
+		f.notid = &c
 	}
 }
 func WithIDMoreThen(id uuid.UUID)  FilterOpt {
+	c := id
 	return func(f *Filter) {
-		f.gtid = &id
+		f.gtid = &c
 	}
 }
 func WithIDLowerThen(id uuid.UUID)  FilterOpt {
+	c := id
 	return func(f *Filter) {
-		f.ltid = &id
+		f.ltid = &c
 	}
 }
 func WithIDMoreOrEqualThen(id uuid.UUID)  FilterOpt {
+	c := id
 	return func(f *Filter) {
-		f.gteqid = &id
+		f.gteqid = &c
 	}
 }
 func WithIDLowerOrEqualThen(id uuid.UUID)  FilterOpt {
+	c := id
 	return func(f *Filter) {
-		f.lteqid = &id
+		f.lteqid = &c
 	}
 }
 func WithIDs (ids ...uuid.UUID)  FilterOpt {
@@ -168,33 +176,39 @@ func WithOrderByIDDesc()  FilterOpt {
 	}
 }
 func WithName(name string)  FilterOpt {
+	c := name
 	return func(f *Filter) {
-		f.name = &name
+		f.name = &c
 	}
 }
 func WithNameNot(name string)  FilterOpt {
+	c := name
 	return func(f *Filter) {
-		f.notname = &name
+		f.notname = &c
 	}
 }
 func WithNameMoreThen(name string)  FilterOpt {
+	c := name
 	return func(f *Filter) {
-		f.gtname = &name
+		f.gtname = &c
 	}
 }
 func WithNameLowerThen(name string)  FilterOpt {
+	c := name
 	return func(f *Filter) {
-		f.ltname = &name
+		f.ltname = &c
 	}
 }
 func WithNameMoreOrEqualThen(name string)  FilterOpt {
+	c := name
 	return func(f *Filter) {
-		f.gteqname = &name
+		f.gteqname = &c
 	}
 }
 func WithNameLowerOrEqualThen(name string)  FilterOpt {
+	c := name
 	return func(f *Filter) {
-		f.lteqname = &name
+		f.lteqname = &c
 	}
 }
 func WithNames (names ...string)  FilterOpt {
@@ -216,33 +230,39 @@ func WithOrderByNameDesc()  FilterOpt {
 	}
 }
 func WithEmail(email *string)  FilterOpt {
+	c := email
 	return func(f *Filter) {
-		f.email = &email
+		f.email = &c
 	}
 }
 func WithEmailNot(email *string)  FilterOpt {
+	c := email
 	return func(f *Filter) {
-		f.notemail = &email
+		f.notemail = &c
 	}
 }
 func WithEmailMoreThen(email *string)  FilterOpt {
+	c := email
 	return func(f *Filter) {
-		f.gtemail = &email
+		f.gtemail = &c
 	}
 }
 func WithEmailLowerThen(email *string)  FilterOpt {
+	c := email
 	return func(f *Filter) {
-		f.ltemail = &email
+		f.ltemail = &c
 	}
 }
 func WithEmailMoreOrEqualThen(email *string)  FilterOpt {
+	c := email
 	return func(f *Filter) {
-		f.gteqemail = &email
+		f.gteqemail = &c
 	}
 }
 func WithEmailLowerOrEqualThen(email *string)  FilterOpt {
+	c := email
 	return func(f *Filter) {
-		f.lteqemail = &email
+		f.lteqemail = &c
 	}
 }
 func WithEmails (emails ...*string)  FilterOpt {
@@ -264,33 +284,39 @@ func WithOrderByEmailDesc()  FilterOpt {
 	}
 }
 func WithBalance(balance float64)  FilterOpt {
+	c := balance
 	return func(f *Filter) {
-		f.balance = &balance
+		f.balance = &c
 	}
 }
 func WithBalanceNot(balance float64)  FilterOpt {
+	c := balance
 	return func(f *Filter) {
-		f.notbalance = &balance
+		f.notbalance = &c
 	}
 }
 func WithBalanceMoreThen(balance float64)  FilterOpt {
+	c := balance
 	return func(f *Filter) {
-		f.gtbalance = &balance
+		f.gtbalance = &c
 	}
 }
 func WithBalanceLowerThen(balance float64)  FilterOpt {
+	c := balance
 	return func(f *Filter) {
-		f.ltbalance = &balance
+		f.ltbalance = &c
 	}
 }
 func WithBalanceMoreOrEqualThen(balance float64)  FilterOpt {
+	c := balance
 	return func(f *Filter) {
-		f.gteqbalance = &balance
+		f.gteqbalance = &c
 	}
 }
 func WithBalanceLowerOrEqualThen(balance float64)  FilterOpt {
+	c := balance
 	return func(f *Filter) {
-		f.lteqbalance = &balance
+		f.lteqbalance = &c
 	}
 }
 func WithBalances (balances ...float64)  FilterOpt {
@@ -312,12 +338,12 @@ func WithOrderByBalanceDesc()  FilterOpt {
 	}
 }
 
-func ApplyWhere[B interface {
+func applyWhere[B interface {
     Where(pred interface{}, args ...interface{}) B
 	Limit(limit uint64) B
 	Offset(limit uint64) B
 	OrderBy(orderBys ...string) B
-}](b B,f Filter) B {
+}](b B,f *Filter) B {
 	if f.id != nil {
       b = b.Where(sq.Eq{ColumnUserID: *f.id})
     }
@@ -475,9 +501,9 @@ func WithUpdateBalance(balance float64)  UpdateOpt {
 	}
 }
 
-func ApplySet[B interface {
+func applySet[B interface {
     Set(column string, value interface{}) B
-}] (b B, f Update) B {
+}] (b B, f *Update) B {
 	if f.id != nil {
       b = b.Set(ColumnUserID, *f.id)
     }

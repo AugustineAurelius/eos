@@ -29,83 +29,52 @@ func (r *QueryRepository) GetMany(ctx context.Context, opts ...FilterOpt) (Users
 }
 
 func get(ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt) (*User, error){
-  var b sq.SelectBuilder
+  	var b sq.SelectBuilder
 
 	switch placeholder {
 	case DollarWildcard:
-	b = sq.Select(
-		ColumnUserID,
-		ColumnUserName,
-		ColumnUserEmail,
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Dollar)
+		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Dollar)
 	default:
-	b = sq.Select(
-		ColumnUserID,
-		ColumnUserName,
-		ColumnUserEmail,
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Question)
+		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Question)
 	}
   
-
-
-
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
-  query, args := 	b.MustSql()
+  	query, args := b.MustSql()
 
-	var temp User
-	err := run.QueryRowContext(ctx, query, args...).Scan(
-		&temp.ID,
-		&temp.Name,
-		&temp.Email,
-		&temp.Balance,
-	)
+	var model User
+	err := run.QueryRowContext(ctx, query, args...).Scan(&model.ID, &model.Name, &model.Email, &model.Balance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
 	}
 
 
-	return &temp, err
+	return &model, err
 }
 
 func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...FilterOpt) (Users, error) {
-  var b sq.SelectBuilder
+  	var b sq.SelectBuilder
 
 	switch placeholder {
 	case DollarWildcard:
-	b = sq.Select(
-		ColumnUserID,
-		ColumnUserName,
-		ColumnUserEmail,
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Dollar)  
-
+		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Dollar)  
 	default:
-	b = sq.Select(
-		ColumnUserID,
-		ColumnUserName,
-		ColumnUserEmail,
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Question)
+		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Question)
 	}
 
-
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 
-  query, args := 	b.MustSql()
+ 	query, args := b.MustSql()
 
-  var users Users
-
+  	var users Users
 	rows, err := run.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error querying database: %w", err)
@@ -113,18 +82,13 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	defer rows.Close()
 
 
-	var temp User
+	var model User
 	for rows.Next() {
-		err := rows.Scan(
-			&temp.ID,
-			&temp.Name,
-			&temp.Email,
-			&temp.Balance,
-		)
+		err = rows.Scan(&model.ID, &model.Name, &model.Email, &model.Balance)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning row: %w", err)
 		}
-		users = append(users, temp)
+		users = append(users, model)
 	}
 
 	if rows.Err() != nil {
@@ -132,6 +96,57 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	}
 
 	return users, err
+}
+
+
+func (r *CommandRepository) GetLazy (ctx context.Context,  opts ...FilterOpt)  (iterUser, error){
+	return getManyLazy(ctx,r.runner,r.placeholder,opts...)
+}
+
+func (r *QueryRepository) GetLazy(ctx context.Context,  opts ...FilterOpt)  (iterUser, error){
+	return getManyLazy(ctx,r.runner,r.placeholder, opts...)
+}
+
+func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ...FilterOpt) (iterUser, error){
+ 	 var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Dollar)
+	default:
+		b = sq.Select(ColumnUserID, ColumnUserName, ColumnUserEmail, ColumnUserBalance).From(TableUser).PlaceholderFormat(sq.Question)
+	}
+
+	f := Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](&f)
+	}
+	b = applyWhere(b, &f)
+
+  	query, args := b.MustSql()
+	rows, err := run.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error querying database: %w", err)
+	}
+	
+	return  userIter(rows), nil
+}
+
+func userIter(rows *sql.Rows)iterUser{
+  return func(yield func(User) bool) {
+    defer rows.Close()
+    var model User
+    for rows.Next() {
+        err := rows.Scan(&model.ID, &model.Name, &model.Email, &model.Balance)
+		if err != nil {
+			return
+		}
+    
+		if !yield(model) {
+			return
+		}
+    }
+  }
 }
 func (r *CommandRepository) GetID (ctx context.Context,  opts ...FilterOpt)  ([]uuid.UUID, error){
 	return getID(ctx,r.runner, r.placeholder, opts...)
@@ -158,11 +173,11 @@ func getID (ctx context.Context, run querier, placeholder wildcard, opts ...Filt
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     IDs := make([]uuid.UUID, 0, 32) 
 
@@ -212,11 +227,11 @@ func getName (ctx context.Context, run querier, placeholder wildcard, opts ...Fi
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     Names := make([]string, 0, 32) 
 
@@ -266,11 +281,11 @@ func getEmail (ctx context.Context, run querier, placeholder wildcard, opts ...F
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     Emails := make([]*string, 0, 32) 
 
@@ -320,11 +335,11 @@ func getBalance (ctx context.Context, run querier, placeholder wildcard, opts ..
 
 
 
-	f := &Filter{}
+	f := Filter{}
 	for i := 0; i < len(opts); i++ {
-		opts[i](f)
+		opts[i](&f)
 	}
-	b = ApplyWhere(b, *f)
+	b = applyWhere(b, &f)
 	query, args := 	b.MustSql()	
     Balances := make([]float64, 0, 32) 
 
@@ -348,74 +363,4 @@ func getBalance (ctx context.Context, run querier, placeholder wildcard, opts ..
 	}
 
 	return Balances, err
-}
-
-func (r *CommandRepository) GetLazy (ctx context.Context,  opts ...FilterOpt)  (iterUser, error){
-	return getManyLazy(ctx,r.runner,r.placeholder,opts...)
-}
-
-func (r *QueryRepository) GetLazy(ctx context.Context,  opts ...FilterOpt)  (iterUser, error){
-	return getManyLazy(ctx,r.runner,r.placeholder, opts...)
-}
-
-func getManyLazy (ctx context.Context, run querier,placeholder wildcard, opts ...FilterOpt) (iterUser, error){
-  var b sq.SelectBuilder
-
-	switch placeholder {
-	case DollarWildcard:
-	b = sq.Select(
-		ColumnUserID,
-		ColumnUserName,
-		ColumnUserEmail,
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Dollar)
-	default:
-	b = sq.Select(
-		ColumnUserID,
-		ColumnUserName,
-		ColumnUserEmail,
-		ColumnUserBalance,
-	).From(TableUser).PlaceholderFormat(sq.Question)
-
-	}
-
-
-
-	f := &Filter{}
-	for i := 0; i < len(opts); i++ {
-		opts[i](f)
-	}
-	b = ApplyWhere(b, *f)
-
-  query, args := b.MustSql()
-
-
-	rows, err := run.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("error querying database: %w", err)
-	}
-	
-	return  userIter(rows), nil
-}
-
-func userIter(rows *sql.Rows)iterUser{
-  return func(yield func(User) bool) {
-    defer rows.Close()
-    var temp User
-    for rows.Next() {
-        err := rows.Scan(
-				&temp.ID,
-				&temp.Name,
-				&temp.Email,
-				&temp.Balance,
-			)
-		if err != nil {
-			return
-		}
-    
-		if !yield(temp) {
-			return
-		}
-    }
-  }
 }

@@ -1,0 +1,12 @@
+package server
+
+import (
+	"context"
+
+)
+
+var _ api.StrictServerInterface = &Handler{}
+//go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Handler
+type Handler struct{}
+
+//impl h *Handler api.StrictServerInterface
