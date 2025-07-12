@@ -10,8 +10,8 @@ import (
 
 func HandleRepository() {
 	var (
-		structName    = flag.String("t", "", "name of the struct for which would be generated repo")
-		withDefaultID = flag.Bool("i", false, "add id to create")
+		structName    = flag.String("type", "", "name of the struct for which would be generated repo")
+		withDefaultID = flag.Bool("default_id", false, "add id to create")
 	)
 
 	flag.Parse()

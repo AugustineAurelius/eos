@@ -76,14 +76,14 @@ type {{.Name}}Option func({{.Name}}Interface) {{.Name}}Interface
 // ===================== Logging Middleware =====================
 
 type {{.Name | firstToLower}}LoggingMiddleware struct {
-	next   {{.Name}}Interface
+	{{.Name}}Interface
 	logger *zap.Logger
 }
 
 func With{{.Name}}Logging(logger *zap.Logger) {{.Name}}Option {
 	return func(next {{.Name}}Interface) {{.Name}}Interface {
 		return &{{.Name | firstToLower}}LoggingMiddleware{
-			next:   next,
+			{{.Name}}Interface: next,
 			logger: logger.With(zap.String("struct", "{{.Name}}")),
 		}
 	}
@@ -108,7 +108,7 @@ func (m *{{$.Name | firstToLower}}LoggingMiddleware) {{.Name}}{{.Signature}} {
     {{- end}}
     {{- end}})}()
 
-    return m.next.{{.Name}}({{ join .Params  ","}})
+    return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
 }
 {{end}}
 {{- end}}
@@ -118,14 +118,14 @@ func (m *{{$.Name | firstToLower}}LoggingMiddleware) {{.Name}}{{.Signature}} {
 // ===================== Tracing Middleware =====================
 
 type {{.Name | firstToLower}}TracingMiddleware struct {
-	next   {{.Name}}Interface
+	{{.Name}}Interface
 	tracer trace.Tracer
 }
 
 func With{{.Name}}Tracing(tracer trace.Tracer) {{.Name}}Option {
 	return func(next {{.Name}}Interface) {{.Name}}Interface {
 		return &{{.Name | firstToLower}}TracingMiddleware{
-			next:   next,
+			{{.Name}}Interface: next,
 			tracer: tracer,
 		}
 	}
@@ -141,7 +141,7 @@ func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
 	defer span.End()
 	{{end -}}
 
-	return m.next.{{.Name}}({{ join .Params  ","}})
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
 }
 {{end}}
 {{- end}}
@@ -151,7 +151,7 @@ func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
 // ===================== NewRelic Middleware =====================
 
 type {{.Name | firstToLower}}NewRelicTracingMiddleware struct {
-	next        {{.Name}}Interface
+	{{.Name}}Interface
 	newRelicApp *newrelic.Application
 	baseLogger  *zap.Logger
 }
@@ -159,7 +159,7 @@ type {{.Name | firstToLower}}NewRelicTracingMiddleware struct {
 func With{{.Name }}NewRelicTracing(app *newrelic.Application, baseLogger *zap.Logger) {{.Name}}Option {
 	return func(next {{.Name}}Interface) {{.Name}}Interface {
 		return &{{.Name | firstToLower}}NewRelicTracingMiddleware{
-			next:        next,
+			{{.Name}}Interface: next,
 			newRelicApp: app,
 			baseLogger:  baseLogger,
 		}
@@ -228,7 +228,7 @@ func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signat
     {{- end}})}()
 
 
-	return m.next.{{.Name}}({{ join .Params ","}})
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params ","}})
 }
 {{end}}
 {{- end}}

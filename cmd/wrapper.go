@@ -10,7 +10,7 @@ import (
 
 func HandleWrapper() {
 	var (
-		name           = flag.String("n", "", "name of the struct")
+		name           = flag.String("name", "", "name of the struct")
 		logging        = flag.Bool("logging", false, "generate logging middleware")
 		tracing        = flag.Bool("tracing", false, "generate tracing middleware")
 		newrelic       = flag.Bool("newrelic", false, "generate NewRelic middleware")
