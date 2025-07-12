@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-//go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Test
+//go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Test --logging --tracing
 type Test struct {
 }
 

@@ -278,7 +278,6 @@ func (i iter{{.MessageName}}) ForEach(f func({{.MessageName}}) )  {
 func (i iter{{.MessageName}}) Collect() ([]{{.MessageName}}) {
 	return slices.Collect(iter.Seq[{{.MessageName}}](i))
 }
-
 //	-1 if x is less than y,
 //	 0 if x equals y,
 //	+1 if x is greater than y.

@@ -85,7 +85,7 @@ func Generate(structName string, WithDefaultID bool) {
 	generateFile("repository_gen.go", "repository_template.tmpl", data)
 
 	generateFile("cursor_gen.go", "cursor_template.tmpl", data)
-	generateFile("helper_gen.go", "helper_template.tmpl", data)
+	// generateFile("helper_gen.go", "helper_template.tmpl", data)
 	generateFile("count_gen.go", "count_template.tmpl", data)
 
 }

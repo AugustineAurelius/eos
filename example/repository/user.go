@@ -1,10 +1,8 @@
 package repository
 
-import "github.com/google/uuid"
-
 //go:generate go run github.com/AugustineAurelius/eos/ generator repository  --type User  --default_id=true
 type User struct {
-	ID    uuid.UUID
+	ID    int
 	Name  string
 	Email *string
 	// Booler  bool
