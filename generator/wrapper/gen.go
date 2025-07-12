@@ -127,15 +127,18 @@ func Generate(data StructData) error {
 		data.OtelMetrics || data.Prometheus || data.Retry || data.CircuitBreaker
 
 	if !hasSelection {
-		// Generate all middlewares in one file (original behavior)
-		if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
-			return err
-		}
-	} else {
-		// Generate only selected middlewares in one file
-		if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "selective.tmpl", data); err != nil {
-			return err
-		}
+		data.Logging = true
+		data.Tracing = true
+		data.NewRelic = true
+		data.Timeout = true
+		data.OtelMetrics = true
+		data.Prometheus = true
+		data.Retry = true
+		data.CircuitBreaker = true
+	}
+
+	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
+		return err
 	}
 
 	return nil
