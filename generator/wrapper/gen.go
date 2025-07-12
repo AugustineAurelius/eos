@@ -21,6 +21,15 @@ type StructData struct {
 	Name        string
 	PackageName string
 	Methods     []method
+	// Middleware selection flags
+	Logging        bool
+	Tracing        bool
+	NewRelic       bool
+	Timeout        bool
+	OtelMetrics    bool
+	Prometheus     bool
+	Retry          bool
+	CircuitBreaker bool
 }
 
 type method struct {
@@ -114,9 +123,21 @@ func Generate(data StructData) error {
 		}
 	}
 
-	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
-		return err
+	hasSelection := data.Logging || data.Tracing || data.NewRelic || data.Timeout ||
+		data.OtelMetrics || data.Prometheus || data.Retry || data.CircuitBreaker
+
+	if !hasSelection {
+		// Generate all middlewares in one file (original behavior)
+		if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
+			return err
+		}
+	} else {
+		// Generate only selected middlewares in one file
+		if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "selective.tmpl", data); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 

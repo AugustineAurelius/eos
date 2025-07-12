@@ -1,0 +1,17 @@
+package domain
+
+{{ if .DoImports -}}
+import (
+{{- range .Imports}}
+    "{{.}}"
+{{- end}}
+)
+{{- end }}
+
+type {{.Name}} struct {
+{{- range .Fields}}
+    {{.Name | methodName}} {{if .IsArray -}}[]{{- end -}} {{.Type | toGoType}} 
+{{- end}}
+}
+
+

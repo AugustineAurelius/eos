@@ -1,0 +1,33 @@
+# This is a spec for a project-v2
+# It is used to generate the code for the project
+# It is written in YAML
+# It is used to generate the code for the project
+domain:
+  entities:
+    User:
+      fields:
+        id: uuid
+        name: string
+        email: string
+        address: Address
+        preferences: Preferences
+        orders: [Order]
+        createdAt: time
+
+    Address:
+      fields:
+        id: uuid
+        street: string
+        city: string
+        zip: string
+
+    Preferences:
+      fields:
+        newsletter: bool
+        language: string
+
+    Order:
+      fields:
+        id: uuid
+        product: string
+        quantity: int
