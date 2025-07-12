@@ -137,7 +137,7 @@ func Generate(data StructData) error {
 		data.CircuitBreaker = true
 	}
 
-	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "wrap.tmpl", data); err != nil {
+	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "selective.tmpl", data); err != nil {
 		return err
 	}
 
