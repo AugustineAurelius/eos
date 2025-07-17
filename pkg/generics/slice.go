@@ -22,6 +22,16 @@ func (s SliceOps[T]) FilterFunc(f func(T) bool) SliceOps[T] {
 	return output
 }
 
+func (s SliceOps[T]) FindFunc(f func(T) bool) (T, bool) {
+	for _, elem := range s {
+		if f(elem) {
+			return elem, true
+		}
+	}
+	var zero T
+	return zero, false
+}
+
 func (s SliceOps[T]) GetFirst() (T, bool) {
 	if len(s) < 1 {
 		var zero T
@@ -117,4 +127,12 @@ func FindByField[T any, K cmp.Ordered](s SliceOps[T], fieldExtractor func(T) K, 
 	}
 	var zero T
 	return zero, false
+}
+
+func Extract[T any, K any](s SliceOps[T], f func(T) K) SliceOps[K] {
+	output := make(SliceOps[K], len(s))
+	for i, elem := range s {
+		output[i] = f(elem)
+	}
+	return output
 }

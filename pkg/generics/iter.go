@@ -116,10 +116,6 @@ func (i Iterator[T]) ExtractField(fieldExtractor func(T) any) Iterator[any] {
 	}
 }
 
-func NewSliceOps[T any](slice []T) SliceOps[T] {
-	return SliceOps[T](slice)
-}
-
 func MapTo[T, R any](i Iterator[T], transform func(T) R) Iterator[R] {
 	return func(yield func(R) bool) {
 		for elem := range i {

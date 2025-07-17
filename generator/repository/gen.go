@@ -39,7 +39,7 @@ type MessageData struct {
 	WithDefaultID  bool
 }
 
-func Generate(structName string, WithDefaultID bool) {
+func Generate(structName string, WithDefaultID bool, tableName string) {
 	filePath := os.Getenv("GOFILE")
 
 	fset := token.NewFileSet()
@@ -57,7 +57,9 @@ func Generate(structName string, WithDefaultID bool) {
 	}
 
 	packageName := node.Name.Name
-	tableName := structName + "s"
+	if tableName == "" {
+		tableName = structName + "s"
+	}
 
 	data := MessageData{
 		PackageName:    packageName,

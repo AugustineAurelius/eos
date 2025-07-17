@@ -100,7 +100,55 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	return {{.MessageName | lower}}s, err
 }
 
+func (r *CommandRepository) GetIterator(ctx context.Context, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}] {
+	return getIterator(ctx, r.runner, r.placeholder, opts...)
+}
 
+func (r *QueryRepository) GetIterator(ctx context.Context, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}] {
+	return getIterator(ctx, r.runner, r.placeholder, opts...)
+}
 
+func getIterator(ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}] {
+	return func(yield func({{.MessageName}}, error) bool) {
+		pageSize := 100
+		offset := 0
 
+		f := Filter{}
+		for i := 0; i < len(opts); i++ {
+			opts[i](&f)
+		}
 
+		if f.limit != nil && *f.limit > 0 {
+			pageSize = *f.limit
+		}
+
+		for {
+			pageOpts := make([]FilterOpt, 0, len(opts)+2)
+			pageOpts = append(pageOpts, opts...)
+			pageOpts = append(pageOpts, WithLimit(pageSize))
+			pageOpts = append(pageOpts, WithOffset(offset))
+
+			{{.MessageName | lower}}s, err := getMany(ctx, run, placeholder, pageOpts...)
+			if err != nil {
+				yield({{.MessageName}}{}, err)
+				return
+			}
+
+			if len({{.MessageName | lower}}s) == 0 {
+				break
+			}
+
+			for _, {{.MessageName | lower}} := range {{.MessageName | lower}}s {
+				if !yield({{.MessageName | lower}}, nil) {
+					return
+				}
+			}
+
+			if len({{.MessageName | lower}}s) < pageSize {
+				break
+			}
+
+			offset += pageSize
+		}
+	}
+}
