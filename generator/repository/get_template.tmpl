@@ -100,6 +100,45 @@ func getMany(ctx context.Context, run querier, placeholder wildcard,  opts ...Fi
 	return {{.MessageName | lower}}s, err
 }
 
+func (r *CommandRepository) Has(ctx context.Context, opts ...FilterOpt) (bool, error) {
+	return has(ctx, r.runner, r.placeholder, opts...)
+}
+
+func (r *QueryRepository) Has(ctx context.Context, opts ...FilterOpt) (bool, error) {
+	return has(ctx, r.runner, r.placeholder, opts...)
+}
+
+func has(ctx context.Context, run querier, placeholder wildcard, opts ...FilterOpt) (bool, error) {
+	var b sq.SelectBuilder
+
+	switch placeholder {
+	case DollarWildcard:
+		b = sq.Select("1").From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+	default:
+		b = sq.Select("1").From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+	}
+
+	f := Filter{}
+	for i := 0; i < len(opts); i++ {
+		opts[i](&f)
+	}
+	b = applyWhere(b, &f)
+	b = b.Limit(1)
+
+	query, args := b.MustSql()
+
+	var exists int
+	err := run.QueryRowContext(ctx, query, args...).Scan(&exists)
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check existence query %s with args %v error = %w", query, args, err)
+	}
+
+	return true, nil
+}
+
 func (r *CommandRepository) GetIterator(ctx context.Context, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}] {
 	return getIterator(ctx, r.runner, r.placeholder, opts...)
 }
