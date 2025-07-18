@@ -16,11 +16,11 @@ import (
 	{{- if .CircuitBreaker}}
 	"sync"
 	{{- end}}
-	{{- if or .Logging .NewRelic .Timeout .Retry .CircuitBreaker}}
+	{{- if or .Logging .NewRelic .Timeout .Retry .CircuitBreaker .ContextLogging}}
 	"time"
 	{{- end}}
 
-	{{- if .Logging}}
+	{{- if or .Logging .ContextLogging}}
 	"go.uber.org/zap"
 	{{- end}}
 	{{- if .Tracing}}
@@ -36,6 +36,9 @@ import (
 	{{- end}}
 	{{- if .Prometheus}}
 	"github.com/prometheus/client_golang/prometheus"
+	{{- end}}
+	{{- if .ContextLogging}}
+	"github.com/AugustineAurelius/eos/pkg/generics"
 	{{- end}}
 )
 
@@ -733,5 +736,56 @@ func (m *{{$.Name | firstToLower}}CircuitBreakerMiddleware)  {{.Name}} {{.Signat
 }
 {{- end}}
 
+{{end}}
+{{- end}}
+
+{{- if .ContextLogging}}
+
+// ===================== Context Logging Middleware =====================
+
+type {{.Name | firstToLower}}ContextLoggingMiddleware struct {
+	{{.Name}}Interface
+	logger *zap.Logger
+}
+
+func With{{.Name}}ContextLogging(logger *zap.Logger) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}ContextLoggingMiddleware{
+			{{.Name}}Interface: next,
+			logger: logger.With(zap.String("struct", "{{.Name}}")),
+		}
+	}
+}
+
+{{range .Methods}}
+{{- if .HasContext}}
+func (m *{{$.Name | firstToLower}}ContextLoggingMiddleware) {{.Name}}{{.Signature}} {
+	start := time.Now()
+	logger := generics.GetOrDefault(ctx, m.logger)
+	
+	logger.Info("call {{.Name}}", 
+	{{- range .InputObjects -}}
+	{{- if eq .Type "context.Context"}}
+	{{- else -}}
+		zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+	{{- end}}
+	{{- end}})
+	
+	defer func() { 
+		duration := time.Since(start)
+		logger.Info("method {{.Name}} call done", 
+			zap.Duration("duration", duration),
+		{{- range .OutputObjects}}
+		{{- if eq .ZapType  "Error" -}} 
+			zap.{{.ZapType}}({{.Name}}),
+		{{- else -}}
+			zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+		{{- end}}
+		{{- end}})
+	}()
+
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{- end}}
 {{end}}
 {{- end}} 

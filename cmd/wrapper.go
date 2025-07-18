@@ -19,6 +19,7 @@ func HandleWrapper() {
 		prometheus     = flag.Bool("prometheus", false, "generate Prometheus metrics middleware")
 		retry          = flag.Bool("retry", false, "generate retry middleware")
 		circuitBreaker = flag.Bool("circuit-breaker", false, "generate circuit breaker middleware")
+		contextLogging = flag.Bool("context-logging", false, "generate context logging middleware")
 	)
 
 	flag.Parse()
@@ -39,6 +40,7 @@ func HandleWrapper() {
 		Prometheus:     *prometheus,
 		Retry:          *retry,
 		CircuitBreaker: *circuitBreaker,
+		ContextLogging: *contextLogging,
 	})
 
 	if err != nil {

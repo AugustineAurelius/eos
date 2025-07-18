@@ -30,6 +30,7 @@ type StructData struct {
 	Prometheus     bool
 	Retry          bool
 	CircuitBreaker bool
+	ContextLogging bool
 }
 
 type method struct {
@@ -80,12 +81,7 @@ func Generate(data StructData) error {
 				continue
 			}
 
-			// Skip unexported methods
-			r, size := utf8.DecodeRuneInString(fn.Name.Name)
-			if r == utf8.RuneError && size <= 1 {
-				continue
-			}
-			if unicode.IsLower(r) {
+			if fn.Name.Name == "" {
 				continue
 			}
 
@@ -124,7 +120,7 @@ func Generate(data StructData) error {
 	}
 
 	hasSelection := data.Logging || data.Tracing || data.NewRelic || data.Timeout ||
-		data.OtelMetrics || data.Prometheus || data.Retry || data.CircuitBreaker
+		data.OtelMetrics || data.Prometheus || data.Retry || data.CircuitBreaker || data.ContextLogging
 
 	if !hasSelection {
 		data.Logging = true
@@ -135,6 +131,7 @@ func Generate(data StructData) error {
 		data.Prometheus = true
 		data.Retry = true
 		data.CircuitBreaker = true
+		data.ContextLogging = true
 	}
 
 	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "selective.tmpl", data); err != nil {
@@ -150,10 +147,11 @@ func formatFieldList(fl *ast.FieldList) []string {
 	}
 
 	var parts []string
-	for i, field := range fl.List {
+	for _, field := range fl.List {
 		typeStr := exprToString(field.Type)
 		if len(field.Names) == 0 {
-			parts = append(parts, fmt.Sprintf("param%d %s", i, typeStr))
+			paramName := generateSnakeCaseName(typeStr)
+			parts = append(parts, fmt.Sprintf("%s %s", paramName, typeStr))
 			continue
 		}
 
@@ -196,12 +194,19 @@ func formatResultsFieldList(fl *ast.FieldList) []string {
 	}
 
 	var parts []string
-	for i, field := range fl.List {
+	for _, field := range fl.List {
+		typeStr := exprToString(field.Type)
 		if len(field.Names) == 0 {
-			parts = append(parts, fmt.Sprintf("param%d", i))
+			paramName := generateSnakeCaseName(typeStr)
+			parts = append(parts, paramName)
 			continue
 		}
 
+		names := make([]string, len(field.Names))
+		for i, name := range field.Names {
+			names[i] = name.Name
+		}
+		parts = append(parts, names...)
 	}
 
 	return parts
@@ -213,11 +218,12 @@ func formatToObjcets(fl *ast.FieldList) []obj {
 	}
 
 	var parts []obj
-	for i, field := range fl.List {
+	for _, field := range fl.List {
 		typeStr := exprToString(field.Type)
 		if len(field.Names) == 0 {
+			paramName := generateSnakeCaseName(typeStr)
 			parts = append(parts, obj{
-				Name:    fmt.Sprintf("param%d", i),
+				Name:    paramName,
 				Type:    typeStr,
 				ZapType: getZapType(typeStr),
 			})
@@ -258,11 +264,11 @@ func hasErrorResult(fl *ast.FieldList) (string, bool) {
 		return "", false
 	}
 
-	for i, field := range fl.List {
-		if strings.Contains(exprToString(field.Type), "error") {
-			return fmt.Sprintf("param%d", i), true
+	for _, field := range fl.List {
+		typeStr := exprToString(field.Type)
+		if strings.Contains(typeStr, "error") {
+			return generateSnakeCaseName(typeStr), true
 		}
-
 	}
 
 	return "", false
@@ -322,6 +328,59 @@ func exprToString(expr ast.Expr) string {
 		return "*" + exprToString(v.X)
 	default:
 		return "unknown"
+	}
+}
+
+// generateSnakeCaseName generates a snake_case name from a type
+func generateSnakeCaseName(typeStr string) string {
+	// Remove common prefixes and suffixes
+	typeStr = strings.TrimPrefix(typeStr, "*")
+	typeStr = strings.TrimPrefix(typeStr, "[]")
+
+	// Handle common types
+	switch typeStr {
+	case "int":
+		return "integer"
+	case "int8":
+		return "integer8"
+	case "int16":
+		return "integer16"
+	case "int32":
+		return "integer32"
+	case "int64":
+		return "integer64"
+	case "uint":
+		return "unsigned_integer"
+	case "uint8":
+		return "unsigned_integer8"
+	case "uint16":
+		return "unsigned_integer16"
+	case "uint32":
+		return "unsigned_integer32"
+	case "uint64":
+		return "unsigned_integer64"
+	case "float32":
+		return "float32"
+	case "float64":
+		return "float64"
+	case "string":
+		return "string"
+	case "bool":
+		return "boolean"
+	case "error":
+		return "err"
+	case "context.Context":
+		return "context"
+	default:
+		// Convert CamelCase to snake_case
+		var result strings.Builder
+		for i, r := range typeStr {
+			if i > 0 && unicode.IsUpper(r) {
+				result.WriteRune('_')
+			}
+			result.WriteRune(unicode.ToLower(r))
+		}
+		return result.String()
 	}
 }
 
