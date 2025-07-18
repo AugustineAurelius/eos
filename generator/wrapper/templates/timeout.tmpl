@@ -1,0 +1,28 @@
+{{- if .Timeout}}
+
+// ===================== Timeout Middleware =====================
+
+type {{.Name | firstToLower}}TimeoutMiddleware struct {
+	{{.Name}}Interface
+	duration time.Duration
+}
+// if method has context as param timeout would be applied
+func With{{.Name }}Timeout(duration time.Duration) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}TimeoutMiddleware{
+			{{.Name}}Interface:   next,
+			duration: duration,
+		}
+	}
+}
+
+{{range .Methods}}
+{{if .HasContext -}}
+func (m *{{$.Name | firstToLower}}TimeoutMiddleware){{.Name}} {{.Signature}} {
+	ctx, cancel := context.WithTimeout(ctx, m.duration)
+	defer cancel()
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{end -}}
+{{end}}
+{{- end}}

@@ -21,16 +21,18 @@ type StructData struct {
 	Name        string
 	PackageName string
 	Methods     []method
+
 	// Middleware selection flags
-	Logging        bool
-	Tracing        bool
-	NewRelic       bool
-	Timeout        bool
-	OtelMetrics    bool
-	Prometheus     bool
-	Retry          bool
-	CircuitBreaker bool
-	ContextLogging bool
+	MiddlewareTemplates map[string]bool
+	Logging             bool
+	Tracing             bool
+	NewRelic            bool
+	Timeout             bool
+	OtelMetrics         bool
+	Prometheus          bool
+	Retry               bool
+	CircuitBreaker      bool
+	ContextLogging      bool
 }
 
 type method struct {
@@ -119,23 +121,58 @@ func Generate(data StructData) error {
 		}
 	}
 
-	hasSelection := data.Logging || data.Tracing || data.NewRelic || data.Timeout ||
-		data.OtelMetrics || data.Prometheus || data.Retry || data.CircuitBreaker || data.ContextLogging
-
-	if !hasSelection {
-		data.Logging = true
-		data.Tracing = true
-		data.NewRelic = true
-		data.Timeout = true
-		data.OtelMetrics = true
-		data.Prometheus = true
-		data.Retry = true
-		data.CircuitBreaker = true
-		data.ContextLogging = true
+	// Initialize middleware templates map if not set
+	if data.MiddlewareTemplates == nil {
+		data.MiddlewareTemplates = make(map[string]bool)
 	}
 
-	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "selective.tmpl", data); err != nil {
+	// Check if any middleware is selected
+	hasSelection := false
+	for _, enabled := range data.MiddlewareTemplates {
+		if enabled {
+			hasSelection = true
+			break
+		}
+	}
+
+	// If no selection, enable all middleware by default
+	if !hasSelection {
+		data.MiddlewareTemplates["logging"] = true
+		data.MiddlewareTemplates["tracing"] = true
+		data.MiddlewareTemplates["newrelic"] = true
+		data.MiddlewareTemplates["timeout"] = true
+		data.MiddlewareTemplates["otel_metrics"] = true
+		data.MiddlewareTemplates["prometheus"] = true
+		data.MiddlewareTemplates["retry"] = true
+		data.MiddlewareTemplates["circuit_breaker"] = true
+		data.MiddlewareTemplates["context_logging"] = true
+	}
+
+	// Map of middleware template files
+	templateFiles := map[string]string{
+		"logging":         "templates/logging.tmpl",
+		"context_logging": "templates/context_logging.tmpl",
+		"tracing":         "templates/tracing.tmpl",
+		"newrelic":        "templates/newrelic.tmpl",
+		"timeout":         "templates/timeout.tmpl",
+		"otel_metrics":    "templates/otel_metrics.tmpl",
+		"prometheus":      "templates/prometheus.tmpl",
+		"retry":           "templates/retry.tmpl",
+		"circuit_breaker": "templates/circuit_breaker.tmpl",
+	}
+
+	// Generate base file first
+	if err := generateFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", "templates/base.tmpl", data); err != nil {
 		return err
+	}
+
+	// Generate middleware files based on selection
+	for templateKey, templateFile := range templateFiles {
+		if enabled, exists := data.MiddlewareTemplates[templateKey]; exists && enabled {
+			if err := appendToFile("wrapper_"+strings.ToLower(data.Name)+"_gen.go", templateFile, data); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -297,6 +334,26 @@ func generateFile(fileName, tmplPath string, data StructData) error {
 			}
 			return string(lc) + s[size:]
 		},
+		"zeroValue": func(typeStr string) string {
+			switch typeStr {
+			case "int", "int8", "int16", "int32", "int64",
+				"uint", "uint8", "uint16", "uint32", "uint64",
+				"float32", "float64":
+				return "0"
+			case "bool":
+				return "false"
+			case "string":
+				return "\"\""
+			case "error":
+				return "nil"
+			default:
+				if strings.HasPrefix(typeStr, "*") || strings.HasPrefix(typeStr, "[]") || strings.HasPrefix(typeStr, "map[") {
+					return "nil"
+				}
+				return typeStr + "{}"
+			}
+		},
+		"add": func(a, b int) int { return a + b },
 	}).Parse(string(tmplContent))
 	if err != nil {
 		return fmt.Errorf("failed to parse template %s: %v", tmplPath, err)
@@ -313,6 +370,66 @@ func generateFile(fileName, tmplPath string, data StructData) error {
 	}
 
 	fmt.Printf("Generated %s\n", fileName)
+	return nil
+}
+
+func appendToFile(fileName, tmplPath string, data StructData) error {
+	tmplContent, err := templateFS.ReadFile(tmplPath)
+	if err != nil {
+		return fmt.Errorf("failed to read template %s: %v", tmplPath, err)
+	}
+
+	tmpl, err := template.New(fileName).Funcs(template.FuncMap{
+		"lower":    strings.ToLower,
+		"upper":    strings.ToUpper,
+		"contains": strings.Contains,
+		"join":     strings.Join,
+		"firstToLower": func(s string) string {
+			r, size := utf8.DecodeRuneInString(s)
+			if r == utf8.RuneError && size <= 1 {
+				return s
+			}
+			lc := unicode.ToLower(r)
+			if r == lc {
+				return s
+			}
+			return string(lc) + s[size:]
+		},
+		"zeroValue": func(typeStr string) string {
+			switch typeStr {
+			case "int", "int8", "int16", "int32", "int64",
+				"uint", "uint8", "uint16", "uint32", "uint64",
+				"float32", "float64":
+				return "0"
+			case "bool":
+				return "false"
+			case "string":
+				return "\"\""
+			case "error":
+				return "nil"
+			default:
+				if strings.HasPrefix(typeStr, "*") || strings.HasPrefix(typeStr, "[]") || strings.HasPrefix(typeStr, "map[") {
+					return "nil"
+				}
+				return typeStr + "{}"
+			}
+		},
+		"add": func(a, b int) int { return a + b },
+	}).Parse(string(tmplContent))
+	if err != nil {
+		return fmt.Errorf("failed to parse template %s: %v", tmplPath, err)
+	}
+
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("failed to open file %s: %v", fileName, err)
+	}
+	defer file.Close()
+
+	if err := tmpl.Execute(file, data); err != nil {
+		return fmt.Errorf("failed to execute template %s: %v", tmplPath, err)
+	}
+
 	return nil
 }
 

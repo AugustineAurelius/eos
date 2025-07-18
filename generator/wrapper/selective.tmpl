@@ -3,41 +3,41 @@
 package {{.PackageName}}
 
 import (
-	{{- if or .Tracing .OtelMetrics .Prometheus}}
+	{{- if or (index .MiddlewareTemplates "tracing") (index .MiddlewareTemplates "otel_metrics") (index .MiddlewareTemplates "prometheus")}}
 	"context"
 	{{- end}}
-	{{- if or .OtelMetrics .CircuitBreaker .Prometheus}}
+	{{- if or (index .MiddlewareTemplates "otel_metrics") (index .MiddlewareTemplates "circuit_breaker") (index .MiddlewareTemplates "prometheus")}}
 	"errors"
 	{{- end}}
-	{{- if .Retry}}
+	{{- if index .MiddlewareTemplates "retry"}}
 	"math"
 	"math/rand"
 	{{- end}}
-	{{- if .CircuitBreaker}}
+	{{- if index .MiddlewareTemplates "circuit_breaker"}}
 	"sync"
 	{{- end}}
-	{{- if or .Logging .NewRelic .Timeout .Retry .CircuitBreaker .ContextLogging}}
+	{{- if or (index .MiddlewareTemplates "logging") (index .MiddlewareTemplates "newrelic") (index .MiddlewareTemplates "timeout") (index .MiddlewareTemplates "retry") (index .MiddlewareTemplates "circuit_breaker") (index .MiddlewareTemplates "context_logging")}}
 	"time"
 	{{- end}}
 
-	{{- if or .Logging .ContextLogging}}
+	{{- if or (index .MiddlewareTemplates "logging") (index .MiddlewareTemplates "context_logging")}}
 	"go.uber.org/zap"
 	{{- end}}
-	{{- if .Tracing}}
+	{{- if index .MiddlewareTemplates "tracing"}}
 	"go.opentelemetry.io/otel/trace"
 	{{- end}}
-	{{- if .NewRelic}}
+	{{- if index .MiddlewareTemplates "newrelic"}}
 	"github.com/newrelic/go-agent/v3/integrations/logcontext-v2/nrzap"
 	"github.com/newrelic/go-agent/v3/newrelic"
 	{{- end}}
-	{{- if .OtelMetrics}}
+	{{- if index .MiddlewareTemplates "otel_metrics"}}
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	{{- end}}
-	{{- if .Prometheus}}
+	{{- if index .MiddlewareTemplates "prometheus"}}
 	"github.com/prometheus/client_golang/prometheus"
 	{{- end}}
-	{{- if .ContextLogging}}
+	{{- if index .MiddlewareTemplates "context_logging"}}
 	"github.com/AugustineAurelius/eos/pkg/generics"
 	{{- end}}
 )
@@ -74,7 +74,7 @@ func New{{.Name}}Middleware(impl *{{.Name}}, opts ...{{.Name}}Option) {{.Name}}I
 // {{.Name}}Option represents a middleware option function
 type {{.Name}}Option func({{.Name}}Interface) {{.Name}}Interface
 
-{{- if .Logging}}
+{{- if index .MiddlewareTemplates "logging"}}
 
 // ===================== Logging Middleware =====================
 
@@ -116,7 +116,7 @@ func (m *{{$.Name | firstToLower}}LoggingMiddleware) {{.Name}}{{.Signature}} {
 {{end}}
 {{- end}}
 
-{{- if .Tracing}}
+{{- if index .MiddlewareTemplates "tracing"}}
 
 // ===================== Tracing Middleware =====================
 
@@ -149,7 +149,7 @@ func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
 {{end}}
 {{- end}}
 
-{{- if .NewRelic}}
+{{- if index .MiddlewareTemplates "newrelic"}}
 
 // ===================== NewRelic Middleware =====================
 
@@ -236,7 +236,7 @@ func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signat
 {{end}}
 {{- end}}
 
-{{- if .Timeout}}
+{{- if index .MiddlewareTemplates "timeout"}}
 
 // ===================== Timeout Middleware =====================
 
@@ -265,7 +265,7 @@ func (m *{{$.Name | firstToLower}}TimeoutMiddleware){{.Name}} {{.Signature}} {
 {{end}}
 {{- end}}
 
-{{- if .OtelMetrics}}
+{{- if index .MiddlewareTemplates "otel_metrics"}}
 
 // ===================== OpenTelemetry Metrics Middleware =====================
 
@@ -373,7 +373,7 @@ func (m *{{$.Name | firstToLower}}OtelMetrics) {{.Name}} {{.Signature}}{
 {{end}}
 {{- end}}
 
-{{- if .Prometheus}}
+{{- if index .MiddlewareTemplates "prometheus"}}
 
 // ===================== Prometheus Metrics Middleware =====================
 
@@ -467,7 +467,7 @@ func (m *{{$.Name | firstToLower}}MetricsMiddleware) {{.Name}} {{.Signature}}{
 {{end}}
 {{- end}}
 
-{{- if .Retry}}
+{{- if index .MiddlewareTemplates "retry"}}
 
 // ===================== Retry Middleware =====================
 
@@ -589,7 +589,7 @@ func (m *{{$.Name | firstToLower}}RetryMiddleware) {{.Name}} {{.Signature}}{
 {{end}}
 {{- end}}
 
-{{- if .CircuitBreaker}}
+{{- if index .MiddlewareTemplates "circuit_breaker"}}
 
 // ===================== Circuit Breaker Middleware =====================
 
@@ -739,7 +739,7 @@ func (m *{{$.Name | firstToLower}}CircuitBreakerMiddleware)  {{.Name}} {{.Signat
 {{end}}
 {{- end}}
 
-{{- if .ContextLogging}}
+{{- if index .MiddlewareTemplates "context_logging"}}
 
 // ===================== Context Logging Middleware =====================
 

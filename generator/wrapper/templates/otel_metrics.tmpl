@@ -1,0 +1,108 @@
+
+{{- if .OtelMetrics}}
+
+// ===================== OpenTelemetry Metrics Middleware =====================
+
+type {{.Name | firstToLower}}OtelMetricsRegister struct {
+    meter       metric.Meter
+    Duration    metric.Float64Histogram
+    Calls       metric.Int64Counter
+    Errors      metric.Int64Counter
+    InFlight    metric.Int64UpDownCounter
+}
+
+func Register{{.Name}}OtelMetrics(provider metric.MeterProvider) *{{.Name | firstToLower}}OtelMetricsRegister {
+    meter := provider.Meter("{{.Name | firstToLower}}/metrics")
+    
+    duration, _ := meter.Float64Histogram(
+        "{{.Name | firstToLower}}_method_duration_seconds",
+        metric.WithDescription("Method execution time distribution"),
+        metric.WithUnit("s"),
+        metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10),
+    )
+
+    calls, _ := meter.Int64Counter(
+        "{{.Name | firstToLower}}_method_calls_total",
+        metric.WithDescription("Total number of method calls"),
+    )
+
+    errors, _ := meter.Int64Counter(
+        "{{.Name | firstToLower}}_method_errors_total",
+        metric.WithDescription("Total number of method errors"),
+    )
+
+    inflight, _ := meter.Int64UpDownCounter(
+        "{{.Name | firstToLower}}_method_in_flight",
+        metric.WithDescription("Current number of executing methods"),
+    )
+
+    return &{{.Name | firstToLower}}OtelMetricsRegister{
+        meter:     meter,
+        Duration:  duration,
+        Calls:     calls,
+        Errors:    errors,
+        InFlight:  inflight,
+    }
+}
+
+type {{.Name | firstToLower}}OtelMetrics struct {
+    {{.Name}}Interface
+    metrics *{{.Name | firstToLower}}OtelMetricsRegister
+}
+
+func With{{.Name}}OtelMetrics(metrics *{{.Name | firstToLower}}OtelMetricsRegister) {{.Name}}Option {
+    return func(next {{.Name}}Interface) {{.Name}}Interface {
+        return &{{.Name | firstToLower}}OtelMetrics{
+            {{.Name}}Interface:    next,
+            metrics: metrics,
+        }
+    }
+}
+
+{{range .Methods}}
+{{- if .HasError}}
+{{- if .HasContext}}
+func (m *{{$.Name | firstToLower}}OtelMetrics) {{.Name}} {{.Signature}}{
+    start := time.Now()
+    methodName := "{{.Name}}"
+    commonAttrs := []attribute.KeyValue{
+        attribute.String("method", methodName),
+    }
+
+    // Track in-flight requests
+    m.metrics.InFlight.Add(ctx, 1)
+    defer m.metrics.InFlight.Add(ctx, -1)
+
+    // Increment call counter
+    m.metrics.Calls.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
+
+    defer func() {
+        duration := time.Since(start).Seconds()
+        m.metrics.Duration.Record(ctx, duration, metric.WithAttributes(commonAttrs...))
+
+        if {{.ErrorParam}} != nil {
+            errorType := {{.ErrorParam}}.Error()
+            switch {
+            case errors.Is({{.ErrorParam}}, context.Canceled):
+                errorType = "context_canceled"
+            case errors.Is({{.ErrorParam}}, context.DeadlineExceeded):
+                errorType = "timeout"
+            }
+            
+            errorAttrs := append(commonAttrs, attribute.String("error_type", errorType))
+            m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+        }
+
+        if r := recover(); r != nil {
+            errorAttrs := append(commonAttrs, attribute.String("error_type", "panic"))
+            m.metrics.Errors.Add(ctx, 1, metric.WithAttributes(errorAttrs...))
+            panic(r) // Re-throw panic after recording
+        }
+    }()
+
+    return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{- end}}
+{{- end}}
+{{end}}
+{{- end}}

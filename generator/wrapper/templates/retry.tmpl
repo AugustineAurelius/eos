@@ -1,0 +1,122 @@
+
+{{- if .Retry}}
+
+// ===================== Retry Middleware =====================
+
+type {{.Name | firstToLower}}RetryMiddleware struct {
+	{{.Name}}Interface
+	retryConfig *retryConfig
+}
+
+type retryConfig struct {
+	timeout *time.Duration
+	//default 100 ms
+	delay time.Duration
+	//default 5 s
+	maxDelay time.Duration
+	// default 5 attempts
+	attempts int
+	// if false -> stop retry default return always true
+	shouldRetryAfter func(error) bool
+}
+type retryOpt func(*retryConfig)
+
+func NewRetryConfig(opts ...retryOpt) *retryConfig {
+	cfg := &retryConfig{
+		timeout:nil,
+		delay:             100 * time.Millisecond,
+		maxDelay:          5 * time.Second,
+		attempts:          5,
+		shouldRetryAfter:  func(err error) bool { return true },
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return cfg
+}
+
+func RetryWithAttempts(attempts int) retryOpt {
+	return func(rc *retryConfig) {
+		rc.attempts = attempts
+	}
+}
+func RetryWithDelay(delay time.Duration) retryOpt {
+	return func(rc *retryConfig) {
+		rc.delay = delay
+	}
+}
+func RetryWithMaximumDelay(maxDelay time.Duration) retryOpt {
+	return func(rc *retryConfig) {
+		rc.maxDelay = maxDelay
+	}
+}
+func RetryWithTimeout(timeout time.Duration) retryOpt {
+	return func(rc *retryConfig) {
+		rc.timeout = &timeout
+	}
+}
+func RetryWithShouldRetryAfter(shouldRetryAfter func(error) bool) retryOpt {
+	return func(rc *retryConfig) {
+		rc.shouldRetryAfter = shouldRetryAfter
+	}
+}
+
+
+func With{{.Name}}Retry(cfg *retryConfig) {{.Name}}Option  {
+    return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}RetryMiddleware{
+			{{.Name}}Interface:        next,
+			retryConfig: cfg,
+		}
+	}
+}
+
+{{range .Methods}}
+
+{{- if .HasError}}
+func (m *{{$.Name | firstToLower}}RetryMiddleware) {{.Name}} {{.Signature}}{
+    {{- if .HasContext}}
+    var cancel context.CancelFunc
+	if _, ok := ctx.Deadline(); !ok && m.retryConfig.timeout != nil {
+		ctx, cancel = context.WithTimeout(ctx, *m.retryConfig.timeout)
+		defer cancel()
+	}
+    {{- end}}
+	for attempt := 0; attempt < m.retryConfig.attempts; attempt++ {
+        {{- if .HasContext}}
+        if ctx.Err() != nil {
+			{{.ErrorParam}} = ctx.Err()
+			return 
+		}
+        {{- end}}
+	
+
+		{{join  .Results ","}} = m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+		if {{.ErrorParam}} == nil {
+			return 
+		}
+
+        if !m.retryConfig.shouldRetryAfter({{.ErrorParam}}) {
+			return
+		}
+
+		if attempt == m.retryConfig.attempts-1 {
+			return
+		}
+
+		backoff := m.retryConfig.delay * time.Duration(math.Pow(2, float64(attempt)))
+		if backoff > m.retryConfig.maxDelay {
+			backoff = m.retryConfig.maxDelay
+		}
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+
+		time.Sleep(jitter)
+	}
+    return 
+}
+{{- end}}
+
+{{end}}
+{{- end}}

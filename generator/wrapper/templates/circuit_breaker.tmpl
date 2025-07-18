@@ -1,0 +1,150 @@
+
+{{- if .CircuitBreaker}}
+
+// ===================== Circuit Breaker Middleware =====================
+
+type circuitBreakerConfig struct {
+	// default 5
+	errorsAmountToOpen  int
+	succesAmountToClose int
+	// default 5 s
+	openInterval time.Duration
+	// if false -> error not counts
+	shouldCountAfter func(error) bool
+}
+type circuitBreakerOpt func(*circuitBreakerConfig)
+
+func NewCircuitBreakerConfig(opts ...circuitBreakerOpt) *circuitBreakerConfig {
+	cfg := &circuitBreakerConfig{
+		errorsAmountToOpen:  5,
+		succesAmountToClose: 5,
+		openInterval:        5 * time.Second,
+		shouldCountAfter:    func(err error) bool { return true },
+	}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	return cfg
+}
+
+func CircuitBreakerWithOpenInterval(openInterval time.Duration) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.openInterval = openInterval
+	}
+}
+func CircuitBreakerWithSucessAmountToClose (succesAmountToClose int) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.succesAmountToClose = succesAmountToClose
+	}
+}
+func CircuitBreakerWithErrorsAmountToOpen(errorsAmountToOpen int) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.errorsAmountToOpen = errorsAmountToOpen
+	}
+}
+func CircuitBreakerWithShouldCountAfter(shouldCountAfter func(error) bool) circuitBreakerOpt {
+	return func(cb *circuitBreakerConfig) {
+		cb.shouldCountAfter = shouldCountAfter
+	}
+}
+
+type circuitBreakerState int
+
+const (
+	Closed circuitBreakerState = iota
+	HalfOpen
+	Open
+)
+
+
+var ErrOpenCircuitBreaker = errors.New("{{.Name}}CircuitBreaker: circuit is open")
+
+type {{.Name | firstToLower}}CircuitBreakerMiddleware struct {
+	{{.Name}}Interface
+
+	mu                     sync.Mutex
+	currentAmountOfErrors  int
+	currentAmountOfSuccess int
+	state                  circuitBreakerState
+	openedAt               *time.Time
+	cfg                    *circuitBreakerConfig
+}
+
+
+func With{{.Name}}CircuitBreaker(cfg *circuitBreakerConfig) {{.Name}}Option  {
+    return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}CircuitBreakerMiddleware{
+			{{.Name}}Interface:        next,
+            state: Closed,
+			cfg: cfg,
+		}
+	}
+}
+
+{{range .Methods}}
+{{- if .HasError}}
+func (m *{{$.Name | firstToLower}}CircuitBreakerMiddleware)  {{.Name}} {{.Signature}} {
+    m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	switch m.state {
+	case Open:
+		if m.openedAt != nil && m.openedAt.After(time.Now()) {
+			{{.ErrorParam}} = ErrOpenCircuitBreaker
+			return
+		}
+		{{join  .Results ","}} = m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+		if {{.ErrorParam}} == nil {
+			m.state = HalfOpen
+			m.currentAmountOfSuccess = 1
+			m.openedAt = nil
+			return
+		}
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+	case HalfOpen:
+		{{join  .Results ","}} = m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+		if {{.ErrorParam}} == nil {
+			m.currentAmountOfSuccess++
+			if m.currentAmountOfSuccess >= m.cfg.succesAmountToClose {
+				m.state = Closed
+				m.currentAmountOfErrors = 0
+			}
+			return
+		}
+		if !m.cfg.shouldCountAfter({{.ErrorParam}}) {
+			return
+		}
+		openedAt := time.Now().Add(m.cfg.openInterval)
+		m.openedAt = &openedAt
+		m.state = Open
+	case Closed:
+		{{join  .Results ","}} = m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+		if {{.ErrorParam}} == nil {
+			m.currentAmountOfErrors = 0
+			m.openedAt = nil
+			return
+		}
+
+		if !m.cfg.shouldCountAfter({{.ErrorParam}}) {
+			return
+		}
+
+		m.currentAmountOfErrors++
+
+		if m.currentAmountOfErrors >= m.cfg.errorsAmountToOpen {
+			openedAt := time.Now().Add(m.cfg.openInterval)
+			m.openedAt = &openedAt
+			m.state = Open
+		}
+	}
+
+	return
+	
+}
+{{- end}}
+
+{{end}}
+{{- end}}

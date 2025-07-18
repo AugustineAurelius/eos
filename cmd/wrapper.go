@@ -30,18 +30,49 @@ func HandleWrapper() {
 		os.Exit(1)
 	}
 
-	err := wrapper.Generate(wrapper.StructData{
-		Name:           *name,
-		Logging:        *logging,
-		Tracing:        *tracing,
-		NewRelic:       *newrelic,
-		Timeout:        *timeout,
-		OtelMetrics:    *otelMetrics,
-		Prometheus:     *prometheus,
-		Retry:          *retry,
-		CircuitBreaker: *circuitBreaker,
-		ContextLogging: *contextLogging,
-	})
+	data := wrapper.StructData{
+		Name:                *name,
+		MiddlewareTemplates: make(map[string]bool, 8),
+	}
+
+	if *logging {
+		data.MiddlewareTemplates["logging"] = true
+		data.Logging = true
+	}
+	if *tracing {
+		data.MiddlewareTemplates["tracing"] = true
+		data.Tracing = true
+	}
+	if *newrelic {
+		data.MiddlewareTemplates["newrelic"] = true
+		data.NewRelic = true
+	}
+	if *timeout {
+		data.MiddlewareTemplates["timeout"] = true
+		data.Timeout = true
+	}
+	if *otelMetrics {
+		data.MiddlewareTemplates["otel_metrics"] = true
+		data.OtelMetrics = true
+	}
+	if *prometheus {
+		data.MiddlewareTemplates["prometheus"] = true
+		data.Prometheus = true
+	}
+	if *retry {
+		data.MiddlewareTemplates["retry"] = true
+		data.Retry = true
+	}
+	if *circuitBreaker {
+		data.MiddlewareTemplates["circuit_breaker"] = true
+		data.CircuitBreaker = true
+	}
+	if *contextLogging {
+		data.MiddlewareTemplates["context_logging"] = true
+		data.ContextLogging = true
+	}
+
+	err := wrapper.Generate(data)
 
 	if err != nil {
 		fmt.Printf("Error generating wrapper: %v\n", err)

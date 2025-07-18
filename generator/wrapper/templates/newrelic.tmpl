@@ -1,0 +1,87 @@
+
+{{- if .NewRelic}}
+
+// ===================== NewRelic Middleware =====================
+
+type {{.Name | firstToLower}}NewRelicTracingMiddleware struct {
+	{{.Name}}Interface
+	newRelicApp *newrelic.Application
+	baseLogger  *zap.Logger
+}
+
+func With{{.Name }}NewRelicTracing(app *newrelic.Application, baseLogger *zap.Logger) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}NewRelicTracingMiddleware{
+			{{.Name}}Interface: next,
+			newRelicApp: app,
+			baseLogger:  baseLogger,
+		}
+	}
+}
+
+{{range .Methods}}
+func (m *{{$.Name | firstToLower}}NewRelicTracingMiddleware) {{.Name}} {{.Signature}} {
+	var logger *zap.Logger
+	{{if .HasContext -}}
+	txn := newrelic.FromContext(ctx)
+	
+	if txn != nil {
+		txnCore, err := nrzap.WrapTransactionCore(m.baseLogger.Core(), txn)
+		if err == nil {
+			logger = zap.New(txnCore).With(zap.String("method", "{{$.Name}}.{{.Name}}"))
+		} else {
+			logger = m.baseLogger.With(zap.Error(err))
+		}
+		seg := txn.StartSegment("{{$.Name}}.{{.Name}}")
+		defer seg.End()
+	} else {
+		txn = m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
+		defer txn.End()
+		ctx = newrelic.NewContext(ctx, txn)
+		
+		bgCore, err := nrzap.WrapBackgroundCore(m.baseLogger.Core(), m.newRelicApp)
+		if err == nil {
+			logger = zap.New(bgCore).With(
+				zap.String("method", "{{$.Name}}.{{.Name}}"),
+				zap.String("transactionType", "background"),
+			)
+		} else {
+			logger = m.baseLogger.With(zap.Error(err))
+		}
+	}
+	{{else -}}
+	txn := m.newRelicApp.StartTransaction("{{$.Name}}.{{.Name}}")
+	defer txn.End()
+	
+	bgCore, err := nrzap.WrapBackgroundCore(m.baseLogger.Core(), m.newRelicApp)
+	if err == nil {
+		logger = zap.New(bgCore).With(
+			zap.String("method", "{{$.Name}}.{{.Name}}"),
+			zap.String("transactionType", "background"),
+		)
+	} else {
+		logger = m.baseLogger.With(zap.Error(err))
+	}
+	{{end -}}
+
+    logger.Info("call {{$.Name}}{{.Name}}", 
+    {{- range .InputObjects -}}
+    {{- if eq .Type "context.Context"}}
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})
+    defer func() { logger.Info("method {{$.Name}}{{.Name}} call done",
+    {{- range .OutputObjects}}
+    {{- if eq .ZapType  "Error" -}} 
+        zap.{{.ZapType}}({{.Name}}),
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})}()
+
+
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params ","}})
+}
+{{end}}
+{{- end}}

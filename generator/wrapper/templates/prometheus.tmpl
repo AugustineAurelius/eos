@@ -1,0 +1,93 @@
+{{- if .Prometheus}}
+
+// ===================== Prometheus Metrics Middleware =====================
+
+type {{.Name | firstToLower}}Metrics struct {
+    Duration   *prometheus.HistogramVec
+    Calls      *prometheus.CounterVec
+    Errors     *prometheus.CounterVec
+    InFlight   prometheus.Gauge
+}
+
+func Register{{.Name}}Metrics(registry prometheus.Registerer) *{{.Name | firstToLower}}Metrics {
+    metrics := &{{.Name | firstToLower}}Metrics{
+        Duration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+            Name: "{{.Name | firstToLower}}_method_duration_seconds",
+            Help: "Method execution time distribution",
+            Buckets: []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+        }, []string{"method"}),
+        
+        Calls: prometheus.NewCounterVec(prometheus.CounterOpts{
+            Name: "{{.Name | firstToLower}}_method_calls_total",
+            Help: "Total number of method calls",
+        }, []string{"method"}),
+        
+        Errors: prometheus.NewCounterVec(prometheus.CounterOpts{
+            Name: "{{.Name | firstToLower}}_method_errors_total",
+            Help: "Total number of method errors",
+        }, []string{"method", "error_type"}),
+        
+        InFlight: prometheus.NewGauge(prometheus.GaugeOpts{
+            Name: "{{.Name | firstToLower}}_method_in_flight",
+            Help: "Current number of executing methods",
+        }),
+    }
+
+    registry.MustRegister(
+        metrics.Duration,
+        metrics.Calls,
+        metrics.Errors,
+        metrics.InFlight,
+    )
+    
+    return metrics
+}
+
+type {{.Name | firstToLower}}MetricsMiddleware struct {
+    {{.Name}}Interface
+    metrics *{{.Name | firstToLower}}Metrics
+}
+
+func With{{.Name}}Metrics(metrics *{{.Name | firstToLower}}Metrics) {{.Name}}Option {
+    return func(next {{.Name}}Interface) {{.Name}}Interface {
+        return &{{.Name | firstToLower}}MetricsMiddleware{
+            {{.Name}}Interface:    next,
+            metrics: metrics,
+        }
+    }
+}
+
+{{range .Methods}}
+
+{{- if .HasError}}
+func (m *{{$.Name | firstToLower}}MetricsMiddleware) {{.Name}} {{.Signature}}{
+    start := time.Now()
+    methodName := "{{.Name}}"
+    
+    m.metrics.InFlight.Inc()
+    defer m.metrics.InFlight.Dec()
+    m.metrics.Calls.WithLabelValues(methodName).Inc()
+
+	defer func(){
+	    duration := time.Since(start).Seconds()
+        m.metrics.Duration.WithLabelValues(methodName).Observe(duration)
+		if {{.ErrorParam}} != nil {
+			errorType := {{.ErrorParam}}.Error()
+			switch {
+			case errors.Is({{.ErrorParam}}, context.Canceled):
+				errorType = "context_canceled"
+			case errors.Is({{.ErrorParam}}, context.DeadlineExceeded):
+				errorType = "timeout"
+			}
+        	m.metrics.Errors.WithLabelValues(methodName, errorType).Inc()
+    	}
+		if r := recover(); r != nil {
+            m.metrics.Errors.WithLabelValues(methodName, "panic").Inc()
+        }
+	}()
+    return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{- end}}
+
+{{end}}
+{{- end}}

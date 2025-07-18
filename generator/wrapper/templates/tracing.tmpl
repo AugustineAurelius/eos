@@ -1,0 +1,33 @@
+
+{{- if .Tracing}}
+
+// ===================== Tracing Middleware =====================
+
+type {{.Name | firstToLower}}TracingMiddleware struct {
+	{{.Name}}Interface
+	tracer trace.Tracer
+}
+
+func With{{.Name}}Tracing(tracer trace.Tracer) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}TracingMiddleware{
+			{{.Name}}Interface: next,
+			tracer: tracer,
+		}
+	}
+}
+
+{{range .Methods}}
+func (m *{{$.Name | firstToLower}}TracingMiddleware){{.Name}} {{.Signature}} {
+	{{if .HasContext -}}
+	ctx, span := m.tracer.Start(ctx, "{{$.Name}}.{{.Name}}")
+	defer span.End()
+	{{else -}}
+	_, span := m.tracer.Start(context.Background(), "{{$.Name}}.{{.Name}}")
+	defer span.End()
+	{{end -}}
+
+	return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{end}}
+{{- end}}

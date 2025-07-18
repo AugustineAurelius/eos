@@ -1,0 +1,42 @@
+
+{{- if .Logging}}
+
+// ===================== Logging Middleware =====================
+
+type {{.Name | firstToLower}}LoggingMiddleware struct {
+	{{.Name}}Interface
+	logger *zap.Logger
+}
+
+func With{{.Name}}Logging(logger *zap.Logger) {{.Name}}Option {
+	return func(next {{.Name}}Interface) {{.Name}}Interface {
+		return &{{.Name | firstToLower}}LoggingMiddleware{
+			{{.Name}}Interface: next,
+			logger: logger.With(zap.String("struct", "{{.Name}}")),
+		}
+	}
+}
+
+{{range .Methods}}
+func (m *{{$.Name | firstToLower}}LoggingMiddleware) {{.Name}}{{.Signature}} {
+    start := time.Now()
+    m.logger.Info("call {{.Name}}", 
+    {{- range .InputObjects -}}
+    {{- if eq .Type "context.Context"}}
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})
+    defer func() { m.logger.Info("method {{.Name}} call done", zap.Duration("diration", time.Since(start)),
+    {{- range .OutputObjects}}
+    {{- if eq .ZapType  "Error" -}} 
+        zap.{{.ZapType}}({{.Name}}),
+    {{- else -}}
+        zap.{{.ZapType}}("{{.Name}}", {{.Name}}),
+    {{- end}}
+    {{- end}})}()
+
+    return m.{{$.Name}}Interface.{{.Name}}({{ join .Params  ","}})
+}
+{{end}}
+{{- end}}
