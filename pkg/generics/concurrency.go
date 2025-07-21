@@ -5,87 +5,65 @@ import (
 	"sync"
 )
 
-func ParallelMap[T, R any](items []T, fn func(T) R) []R {
+func ParallelMap[T, R any](items []T, fn func(context.Context, T) (R, error)) ([]R, error) {
 	return ParallelMapWithContext(context.Background(), items, fn)
 }
 
-func ParallelMapWithContext[T, R any](ctx context.Context, items []T, fn func(T) R) []R {
-	if len(items) == 0 {
-		return nil
-	}
-
-	results := make([]R, len(items))
-	var wg sync.WaitGroup
-
-	for i, item := range items {
-		wg.Add(1)
-		go func(index int, value T) {
-			defer wg.Done()
-
-			resultChan := make(chan R, 1)
-			go func() {
-				defer close(resultChan)
-				resultChan <- fn(value)
-			}()
-			select {
-			case <-ctx.Done():
-				return
-			case res := <-resultChan:
-				results[index] = res
-			}
-		}(i, item)
-	}
-
-	wg.Wait()
-	return results
-}
-
-func ParallelMapWithError[T, R any](items []T, fn func(T) (R, error)) ([]R, error) {
-	return ParallelMapWithErrorAndContext(context.Background(), items, fn)
-}
-
-func ParallelMapWithErrorAndContext[T, R any](ctx context.Context, items []T, fn func(T) (R, error)) ([]R, error) {
+func ParallelMapWithContext[T, R any](ctx context.Context, items []T, fn func(context.Context, T) (R, error)) ([]R, error) {
 	if len(items) == 0 {
 		return nil, nil
 	}
 
-	results := make([]R, len(items))
-	errors := make([]error, len(items))
+	ctx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
+
+	resultChan := make(chan R, len(items))
+	errChan := make(chan error, len(items))
 	var wg sync.WaitGroup
+	wg.Add(len(items))
 
 	for i, item := range items {
-		wg.Add(1)
 		go func(index int, value T) {
 			defer wg.Done()
-			resultChan := make(chan R, 1)
-			errChan := make(chan error, 1)
+
+			doneChan := make(chan struct{}, 1)
+			var result R
+			var err error
 			go func() {
-				defer close(resultChan)
-				defer close(errChan)
-				res, err := fn(value)
-				if err != nil {
-					errChan <- err
-				} else {
-					resultChan <- res
-				}
+				result, err = fn(ctx, value)
+				close(doneChan)
 			}()
+
 			select {
 			case <-ctx.Done():
-				errors[index] = ctx.Err()
-			case res := <-resultChan:
-				results[index] = res
-			case err := <-errChan:
-				errors[index] = err
+				errChan <- ctx.Err()
+			case <-doneChan:
+				if err != nil {
+					errChan <- err
+					cancel(err)
+				} else {
+					resultChan <- result
+				}
 			}
 		}(i, item)
 	}
 
 	wg.Wait()
+	close(resultChan)
+	close(errChan)
 
-	for _, err := range errors {
+	select {
+	case err := <-errChan:
 		if err != nil {
-			return results, err
+			return nil, context.Cause(ctx)
 		}
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	results := make([]R, 0, len(items))
+	for result := range resultChan {
+		results = append(results, result)
 	}
 
 	return results, nil

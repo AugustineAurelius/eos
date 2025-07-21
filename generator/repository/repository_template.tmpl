@@ -5,11 +5,29 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/AugustineAurelius/eos/pkg/generics"
 	sq "github.com/Masterminds/squirrel"
 	{{- range .Imports }}
 	{{ . }}
 	{{- end }}
 )
+
+type Query interface {
+	Get(ctx context.Context, opts ...FilterOpt) (*{{.MessageName}}, error)
+	GetMany(ctx context.Context, opts ...FilterOpt) (generics.SliceOps[{{.MessageName}}], error)
+	Has(ctx context.Context, opts ...FilterOpt) (bool, error)
+	GetIterator(ctx context.Context, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}]
+	Count(ctx context.Context, opts ...FilterOpt) (int, error)
+	NewCursor(ctx context.Context, params BuilderParams, opts ...FilterOpt) *Cursor
+}
+
+type Command interface {
+	Query
+	Create(ctx context.Context, model *{{.MessageName}}) error
+	CreateMany(ctx context.Context, {{.MessageName | lower}}s []{{.MessageName}}) error
+	Update(ctx context.Context, u Update, opts ...FilterOpt) error
+	Delete(ctx context.Context, opts ...FilterOpt) error
+}
 
 type querier interface {
     ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
