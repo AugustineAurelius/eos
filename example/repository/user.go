@@ -1,6 +1,6 @@
 package repository
 
-//go:generate go run github.com/AugustineAurelius/eos/ generator repository  --type User  --default_id=true
+//go:generate go run github.com/AugustineAurelius/eos/ generator repository  --type User  --default_id=true --table=users
 type User struct {
 	ID    int
 	Name  string
