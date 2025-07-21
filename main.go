@@ -65,8 +65,8 @@ func handleGenerator() {
 		cmd.HandleRepository()
 	case "common":
 		cmd.HandleCommon()
-	// case "project-v2":
-	// 	cmd.HandleProjectV2()
+	case "parser":
+		cmd.HandleParser()
 	case "help", "-h", "--help":
 		printGeneratorUsage()
 	default:
@@ -83,9 +83,11 @@ func printGeneratorUsage() {
   project       Generate a new Go project structure
   repository    Generate repository pattern for structs
   common        Generate common files
+  parser        Parse Go files
 
 Examples:
   eos generator wrapper -n MyStruct --logging --timeout
   eos generator project -p myproject -o ./output
-  eos generator repository -t User -i`)
+  eos generator repository -t User -i
+  eos generator parser -f main.go`)
 }
