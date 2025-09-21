@@ -37,6 +37,9 @@ type MessageData struct {
 	Imports        []string
 	IteratorNumber []string
 	WithDefaultID  bool
+	HasIDField     bool
+	IDType         string
+	SupportsSave   bool
 }
 
 func Generate(structName string, WithDefaultID bool, tableName string) {
@@ -61,6 +64,7 @@ func Generate(structName string, WithDefaultID bool, tableName string) {
 		tableName = structName + "s"
 	}
 
+	idType := getIDType(fields)
 	data := MessageData{
 		PackageName:    packageName,
 		MessageName:    structName,
@@ -72,24 +76,18 @@ func Generate(structName string, WithDefaultID bool, tableName string) {
 		Imports:        imports,
 		IteratorNumber: []string{"int", "int8", "int16", "int32", "int64", "uint", "uint8", "uint16", "uint32", "uint64", "uintptr", "float32", "float64"},
 		WithDefaultID:  WithDefaultID,
+		HasIDField:     hasIDField(fields),
+		IDType:         idType,
+		SupportsSave:   supportsSaveMethod(idType),
 	}
 
 	generateFile("schema.go", "schema_template.tmpl", data)
 
-	generateFile("get_"+strings.ToLower(structName)+"_gen.go", "get_template.tmpl", data)
+	if _, err := os.Stat("interfaces.go"); os.IsNotExist(err) {
+		generateFile("interfaces.go", "interfaces_template.tmpl", data)
+	}
 
-	generateFile("create_"+strings.ToLower(structName)+"_gen.go", "create_template.tmpl", data)
-
-	generateFile("update_"+strings.ToLower(structName)+"_gen.go", "update_template.tmpl", data)
-
-	generateFile("delete_"+strings.ToLower(structName)+"_gen.go", "delete_template.tmpl", data)
-
-	generateFile("repository_gen.go", "repository_template.tmpl", data)
-
-	generateFile("cursor_gen.go", "cursor_template.tmpl", data)
-	// generateFile("helper_gen.go", "helper_template.tmpl", data)
-	generateFile("count_gen.go", "count_template.tmpl", data)
-
+	generateFile("repository_gen.go", "repository_combined_template.tmpl", data)
 }
 
 func generateFile(fileName, tmplPath string, data MessageData) {
@@ -233,4 +231,44 @@ func getPlaceholders(structName string, fields []Field) []string {
 		placeholders = append(placeholders, fmt.Sprintf("%s.%s", strings.ToLower(structName), field.Name))
 	}
 	return placeholders
+}
+
+func hasIDField(fields []Field) bool {
+	for _, field := range fields {
+		if field.Name == "ID" {
+			return true
+		}
+	}
+	return false
+}
+
+func getIDType(fields []Field) string {
+	for _, field := range fields {
+		if field.Name == "ID" {
+			return field.Type
+		}
+	}
+	return ""
+}
+
+func supportsSaveMethod(idType string) bool {
+	supportedTypes := []string{
+		"int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uint32", "uint64", "uintptr",
+		"float32", "float64",
+		"string",
+		"uuid.UUID",
+		"*int", "*int8", "*int16", "*int32", "*int64",
+		"*uint", "*uint8", "*uint16", "*uint32", "*uint64", "*uintptr",
+		"*float32", "*float64",
+		"*string",
+		"*uuid.UUID",
+	}
+
+	for _, supportedType := range supportedTypes {
+		if idType == supportedType {
+			return true
+		}
+	}
+	return false
 }
