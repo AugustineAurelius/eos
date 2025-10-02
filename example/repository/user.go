@@ -7,6 +7,7 @@ type User struct {
 	Email *string
 	// Booler  bool
 	Balance float64
+	// Balance2 decimal.Decimal
 	// Created time.Time
 	// Addresses []string
 	// UserTime int
