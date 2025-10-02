@@ -616,9 +616,9 @@ func count(ctx context.Context, run querier, placeholder wildcard, opts ...Filte
 
 	switch placeholder {
 	case DollarWildcard:
-    	b = sq.Select("COUNT (id)").From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
+    	b = sq.Select("COUNT (1)").From(Table{{.MessageName}}).PlaceholderFormat(sq.Dollar)
 	default:
-    	b = sq.Select("COUNT (id)").From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
+    	b = sq.Select("COUNT (1)").From(Table{{.MessageName}}).PlaceholderFormat(sq.Question)
 	}
 
   	f := Filter{}
