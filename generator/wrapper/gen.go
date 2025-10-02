@@ -489,7 +489,28 @@ func generateSnakeCaseName(typeStr string) string {
 	case "context.Context":
 		return "context"
 	default:
-		// Convert CamelCase to snake_case
+		// Handle imported types (containing dots)
+		if strings.Contains(typeStr, ".") {
+			// For imported types like decimal.Decimal, replace dots with underscores
+			// and convert to camelCase
+			typeStr = strings.ReplaceAll(typeStr, ".", "_")
+			var result strings.Builder
+			parts := strings.Split(typeStr, "_")
+			for i, part := range parts {
+				if i == 0 {
+					// First part in lowercase
+					result.WriteString(strings.ToLower(part))
+				} else {
+					// Subsequent parts capitalized
+					if len(part) > 0 {
+						result.WriteString(strings.ToUpper(part[:1]) + strings.ToLower(part[1:]))
+					}
+				}
+			}
+			return result.String()
+		}
+
+		// Convert CamelCase to snake_case for local types
 		var result strings.Builder
 		for i, r := range typeStr {
 			if i > 0 && unicode.IsUpper(r) {
