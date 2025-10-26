@@ -50,6 +50,7 @@ type Query interface {
 	GetMany(ctx context.Context, opts ...FilterOpt) (generics.SliceOps[{{.MessageName}}], error)
 	Has(ctx context.Context, opts ...FilterOpt) (bool, error)
 	GetIterator(ctx context.Context, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}]
+	GetIteratorV2(ctx context.Context, opts ...FilterOpt) generics.IterWithErr[{{.MessageName}}]
 	Count(ctx context.Context, opts ...FilterOpt) (int, error)
 	NewCursor(ctx context.Context, params BuilderParams, opts ...FilterOpt) *Cursor
 }
