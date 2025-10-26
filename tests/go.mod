@@ -8,6 +8,7 @@ require (
 	github.com/AugustineAurelius/eos v0.0.34
 	github.com/Masterminds/squirrel v1.5.4
 	github.com/jackc/pgx/v5 v5.7.6
+	github.com/joho/godotenv v1.5.1
 	github.com/shopspring/decimal v1.4.0
 )
 
