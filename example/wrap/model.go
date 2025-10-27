@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-//go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Test --logging --tracing --newrelic --timeout --otel-metrics --prometheus --retry --circuit-breaker --context-logging
+//go:generate go run github.com/AugustineAurelius/eos/ generator wrapper  --name Test --logging --tracing --newrelic --timeout --otel-metrics --prometheus --retry --circuit-breaker --context-logging --include-private=false
 type Test struct {
 }
 

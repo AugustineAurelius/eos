@@ -20,6 +20,7 @@ func HandleWrapper() {
 		retry          = flag.Bool("retry", false, "generate retry middleware")
 		circuitBreaker = flag.Bool("circuit-breaker", false, "generate circuit breaker middleware")
 		contextLogging = flag.Bool("context-logging", false, "generate context logging middleware")
+		includePrivate = flag.Bool("include-private", true, "include private methods in generation")
 	)
 
 	flag.Parse()
@@ -31,8 +32,9 @@ func HandleWrapper() {
 	}
 
 	data := wrapper.StructData{
-		Name:                *name,
-		MiddlewareTemplates: make(map[string]bool, 8),
+		Name:                  *name,
+		MiddlewareTemplates:   make(map[string]bool, 8),
+		IncludePrivateMethods: *includePrivate,
 	}
 
 	if *logging {
