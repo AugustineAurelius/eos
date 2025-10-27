@@ -33,6 +33,8 @@ type StructData struct {
 	Retry               bool
 	CircuitBreaker      bool
 	ContextLogging      bool
+
+	IncludePrivateMethods bool
 }
 
 type method struct {
@@ -84,6 +86,10 @@ func Generate(data StructData) error {
 			}
 
 			if fn.Name.Name == "" {
+				continue
+			}
+
+			if !data.IncludePrivateMethods && !isPublicMethod(fn.Name.Name) {
 				continue
 			}
 
@@ -586,4 +592,12 @@ func getZapType(typeStr string) string {
 
 		return "Any"
 	}
+}
+
+func isPublicMethod(name string) bool {
+	if name == "" {
+		return false
+	}
+	r, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(r)
 }
