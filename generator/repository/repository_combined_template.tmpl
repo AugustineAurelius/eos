@@ -449,9 +449,6 @@ func get(ctx context.Context, run querier, placeholder wildcard, opts ...FilterO
 	var model {{.MessageName}}
 	err := run.QueryRowContext(ctx, query, args...).Scan({{- .Fields | scan }})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, generics.ErrNotFound
-		}
 		return nil, fmt.Errorf("failed to get query %s with args %v error = %w" , query, args, err)
 	}
 
