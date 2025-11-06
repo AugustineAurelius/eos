@@ -197,6 +197,9 @@ func parseStruct(node *ast.File, structName string) ([]Field, error) {
 			}
 			for _, field := range structType.Fields.List {
 				fieldName := field.Names[0].Name
+				if fieldName == "_" {
+					continue
+				}
 				fieldType := exprToString(field.Type)
 				column := fieldName
 				fields = append(fields, Field{
