@@ -14,8 +14,10 @@ import (
 
 	"github.com/AugustineAurelius/eos/pkg/generics"
 	sq "github.com/Masterminds/squirrel"
-	{{- range .Imports }}
-	{{ . }}
+	{{- range $imp := .Imports }}
+	  {{ if and (ne $imp "\"fmt\"") (ne $imp "\"github.com/google/uuid\"") }}
+        {{- $imp }}
+      {{ end }}
 	{{- end }}
 )
 
