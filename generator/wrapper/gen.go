@@ -223,6 +223,15 @@ func formatParamsFieldList(fl *ast.FieldList) []string {
 
 		names := make([]string, len(field.Names))
 		for i, name := range field.Names {
+			if name.Name == "_" {
+				if strings.HasPrefix(typeStr, "*") {
+					names[i] = "nil"
+				} else {
+					names[i] = typeStr + "{}"
+				}
+
+				continue
+			}
 			names[i] = name.Name
 		}
 		parts = append(parts, names...)
